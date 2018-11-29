@@ -6,7 +6,7 @@ This is an early work in progress!
 
 ## Installation
 
-Make sure you have Python installed in your environment. This has only been tested on Python >3 on a Mac.
+Make sure you have Python installed in your environment. This only works with Python 3+.
 
 Clone this repository, cd to the downloaded directory, and install necessary dependencies:
 
