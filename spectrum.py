@@ -19,12 +19,16 @@ def import_spectral_csv(filename, weight=1.0, normalize=False):
         reader = csv.reader(csvFile, delimiter=',')
 
         for count, row in enumerate(reader):
-            spd[int(row[0])] = float(row[1])*weight
+            spd[int(row[0])] = float(row[1])
 
     if normalize:
         spd = normalize_spd(spd)
 
+    if weight is not 1.0:
+        spd = weight_spd(spd, weight)
+
     return spd
+
 
 """
 Normalizes an SPD to [0,1]
@@ -34,9 +38,23 @@ Normalizes an SPD to [0,1]
 @return dict        The normalized SPD
 """
 def normalize_spd(spd):
-    factor = 1.0 / sum(spd.values())
+    maximum = max(spd.values())
     for i in spd:
-        spd[i] = spd[i]*factor
+        spd[i] = spd[i] / maximum
+    return spd
+
+
+"""
+Weights an SPD
+
+@param dict spd         The SPD dictionary
+@param float weight     The weight to apply
+
+@return dict            The weighted SPD
+"""
+def weight_spd(spd, weight):
+    for i in spd:
+        spd[i] = spd[i] * weight
     return spd
 
 
@@ -50,6 +68,7 @@ Creates a named SPD usable by the Colour library
 """
 def create_colour_spd(spd_dict, spd_name):
     return colour.SpectralPowerDistribution(spd_dict, name=spd_name)
+
 
 """
 Imports a spectral CSV and creates a named SPD usable by the Colour library
@@ -65,4 +84,8 @@ def import_spd(filename, spd_name, weight=1.0, normalize=False):
     spd_dict = import_spectral_csv(filename, weight, normalize)
     return create_colour_spd(spd_dict, spd_name)
 
+
+# debug
+# spd = import_spd('CSVs/test_spd.csv', 'test', weight=0.9, normalize=True)
+# print(spd)
         
