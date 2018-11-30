@@ -63,21 +63,24 @@ def wavelength_to_rgb(wavelength, gamma=0.8):
 Plots a color spectrum
 
 @param SpectralPowerDistribution spd        The SPD
-@param int/float xsize [optional]           The width of the plotted figure
-@param int/float ysize [optional]           The height of the plotted figure
+@param tuple figsize [optional]             The (width,height) of the plotted figure
 @param string filename [optional]           If specified, will save plot as the specified filename
 @param string ylabel [optional]             If specified, this will replace 'Intensity' on the y axis
+@param bool hideyaxis [optional]            If True, the y axis will not be shown
 @param bool supress [optional]              If True, the plot will not be shown
+@param tuple xlim [optional]                The (min,max) values for the x axis
+@param int xtick [optional]                 The x axis tick spacing
+@param int/float ytick [optional]           The y axis tick spacing
 """
-def plot_spectrum(spd, xsize=8, ysize=4, filename=None, ylabel='Intensity', suppress=False):
-    clim=(360,780)
-    norm = plt.Normalize(*clim)
-    wl = np.arange(clim[0],clim[1]+1,2)
+def plot_spectrum(spd, figsize=(8,4), filename=None, ylabel='Intensity', hideyaxis=False, suppress=False, xlim=(360,780), xtick=30, ytick=0.2):
+    norm = plt.Normalize(*xlim)
+    wl = np.arange(xlim[0],xlim[1]+1,2)
     colorlist = list(zip(norm(wl),[wavelength_to_rgb(w) for w in wl]))
     spectralmap = matplotlib.colors.LinearSegmentedColormap.from_list("spectrum", colorlist)
 
-    fig, axs = plt.subplots(1, 1, figsize=(xsize,ysize), tight_layout=True)
+    fig, ax = plt.subplots(1, 1, figsize=figsize, tight_layout=True)
 
+    # Get the SPD values and plot
     wavelengths = spd.wavelengths
     values = spd.values
     plt.plot(wavelengths, values, linestyle='None')
@@ -87,19 +90,40 @@ def plot_spectrum(spd, xsize=8, ysize=4, filename=None, ylabel='Intensity', supp
 
     extent=(np.min(wavelengths), np.max(wavelengths), 0, np.max(values))
 
-    plt.imshow(X, clim=clim,  extent=extent, cmap=spectralmap, aspect='auto')
+    plt.imshow(X, clim=xlim,  extent=extent, cmap=spectralmap, aspect='auto')
     plt.xlabel('Wavelength (nm)')
     plt.ylabel(ylabel)
 
+    # fill the plot with whitespace
     plt.fill_between(wavelengths, values, np.max(values), color='w')
+
+    # plot dots to display values at beginning and end of x axis
+    plt.plot(xlim[0], 0, linestyle='None')
+    plt.plot(xlim[1], 0, linestyle='None')
+
+    # set the axis ticks
+    plt.xticks(np.arange(xlim[0], xlim[1]+1, xtick))
+    if hideyaxis:
+        ax.spines['left'].set_color('none')
+        plt.gca().axes.get_yaxis().set_visible(False)
+    else:
+        plt.yticks(np.arange(0.0, np.max(values)+ytick, ytick))
+
+    # change the style of the axis spines
+    ax.spines['top'].set_color('none')
+    ax.spines['right'].set_color('none')
+    ax.spines['left'].set_smart_bounds(True)
+    ax.spines['bottom'].set_smart_bounds(True)
     
+    # Save the figure if a filename was specified
     if filename:
         plt.savefig(filename, dpi=300)
 
+    # Show the plot
     if not suppress:
         plt.show()
 
 
 # for testing
 spd = import_spd('CSVs/test_spd.csv', 'test', weight=0.9, normalize=True)
-plot_spectrum(spd)
+plot_spectrum(spd, hideyaxis=True)
