@@ -61,10 +61,10 @@ def weight_spd(spd, weight):
 """
 Creates a named SPD usable by the Colour library
 
-@param dict spd_dict        The SPD as a dictionary
-@param string spd_name:     The name of the SPD
+@param dict spd_dict                The SPD as a dictionary
+@param string spd_name:             The name of the SPD
 
-@return                     The SPD as an object usable by the Colour library
+@return SpectralPowerDistribution   The SPD as an object usable by the Colour library
 """
 def create_colour_spd(spd_dict, spd_name):
     return colour.SpectralPowerDistribution(spd_dict, name=spd_name)
@@ -78,7 +78,7 @@ Imports a spectral CSV and creates a named SPD usable by the Colour library
 @param float weight [optional]      A multplier to help normalize the spectral data
 @param bool normalize [optional]    Normalize the spectrum to [0,1]
 
-@return                             The SPD as an object usable by the Colour library
+@return SpectralPowerDistribution   The SPD as an object usable by the Colour library
 """
 def import_spd(filename, spd_name, weight=1.0, normalize=False):
     spd_dict = import_spectral_csv(filename, weight, normalize)
