@@ -214,7 +214,9 @@ def plot_multi_spectrum(
         ax1.spines['left'].set_color('none')
         ax1.spines['top'].set_color('none')
         ax1.spines['right'].set_color('none')
-        ax1.tick_params(labelcolor='w', top=False, left=False, right=False)
+        ax1.spines['bottom'].set_smart_bounds(True)
+        ax1.yaxis.set_visible(False)
+        ax1.tick_params(top=False, left=False, right=False, bottom=True)
 
     # get the SPD values and plot
     legend_vals = []
@@ -232,21 +234,23 @@ def plot_multi_spectrum(
 
     # label the axes
     plt.xlabel('Wavelength (nm)')
-    ax0.set_ylabel(ylabel)
 
     # set the axis ticks
-    # plt.xticks(np.arange(xlim[0], xlim[1]+1, xtick))
-    # if hideyaxis:
-    #     ax.spines['left'].set_color('none')
-    #     plt.gca().axes.get_yaxis().set_visible(False)
-    # else:
-    #     plt.yticks(np.arange(0.0, np.max(values)+ytick, ytick))
+    plt.xticks(np.arange(xlim[0], xlim[1]+1, xtick))
+    ax0.tick_params(bottom=False)
+    ax0.xaxis.set_visible(False)
+    ax0.spines['bottom'].set_color('none')
+    if hideyaxis:
+        ax0.spines['left'].set_color('none')
+        ax0.yaxis.set_visible(False)
+    else:
+        plt.yticks(np.arange(0.0, np.max(values)+ytick, ytick))
+        ax0.set_ylabel(ylabel)
 
     # change the style of the axis spines
-    # ax.spines['top'].set_color('none')
-    # ax.spines['right'].set_color('none')
-    # ax.spines['left'].set_smart_bounds(True)
-    # ax.spines['bottom'].set_smart_bounds(True)
+    ax0.spines['top'].set_color('none')
+    ax0.spines['right'].set_color('none')
+    ax0.spines['left'].set_smart_bounds(True)
     
     # save the figure if a filename was specified
     if filename:
@@ -264,4 +268,4 @@ def plot_multi_spectrum(
 spd = import_spd('CSVs/test_spd.csv', 'test', weight=0.9, normalize=True)
 spd_2 = import_spd('CSVs/incandescent.csv', 'Incandescent', normalize=True)
 # plot_spectrum(spd, hideyaxis=True, melanopic_curve=True, melanopic_stimulus=True)
-plot_multi_spectrum([spd, spd_2], melanopic_curve=True)
+plot_multi_spectrum([spd, spd_2], melanopic_curve=True, hideyaxis=False)
