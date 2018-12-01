@@ -81,7 +81,7 @@ def plot_spectrum(
     ):
     # generate the color spectrum
     norm = plt.Normalize(*xlim)
-    wl = np.arange(xlim[0],xlim[1]+1,2)
+    wl = np.arange(xlim[0],xlim[1]+1,1)
     colorlist = list(zip(norm(wl),[wavelength_to_rgb(w) for w in wl]))
     spectralmap = matplotlib.colors.LinearSegmentedColormap.from_list("spectrum", colorlist)
 
