@@ -195,6 +195,8 @@ def plot_multi_spectrum(
         xlim=(360,780), xtick=30, ytick=0.2, melanopic_curve=False,
         colorbar=True, showlegend=True
     ):
+    # TODO fix non-colorbar display
+
     # create the figure
     fig, (ax0, ax1) = plt.subplots(2, 1, figsize=figsize, tight_layout=True, sharex=True, gridspec_kw={'height_ratios':[8,1], 'hspace':0})
     wavelengths = spds[0].wavelengths
@@ -262,11 +264,8 @@ def plot_multi_spectrum(
         plt.show()
 
 
-
-
-
 # for testing
-spd = import_spd('CSVs/test_spd.csv', 'test', weight=0.9, normalize=True)
-spd_2 = import_spd('CSVs/incandescent.csv', 'Incandescent', normalize=True)
-plot_spectrum(spd, hideyaxis=True, melanopic_curve=True, melanopic_stimulus=True)
-plot_multi_spectrum([spd, spd_2], melanopic_curve=True, hideyaxis=True)
+# spd = import_spd('CSVs/test_spd.csv', 'test', weight=0.9, normalize=True)
+# spd_2 = import_spd('CSVs/incandescent.csv', 'Incandescent', normalize=True)
+# plot_spectrum(spd, hideyaxis=True, melanopic_curve=True, melanopic_stimulus=True)
+# plot_multi_spectrum([spd, spd_2], melanopic_curve=True, hideyaxis=True)
