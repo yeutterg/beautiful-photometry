@@ -196,7 +196,7 @@ def plot_multi_spectrum(
         colorbar=True, showlegend=True
     ):
     # create the figure
-    fig, (ax0, ax1) = plt.subplots(2, 1, figsize=figsize, tight_layout=True, sharex=True, gridspec_kw={'height_ratios':[8,1]})
+    fig, (ax0, ax1) = plt.subplots(2, 1, figsize=figsize, tight_layout=True, sharex=True, gridspec_kw={'height_ratios':[8,1], 'hspace':0})
     wavelengths = spds[0].wavelengths
 
     # plot the color bar
@@ -217,6 +217,7 @@ def plot_multi_spectrum(
         ax1.spines['bottom'].set_smart_bounds(True)
         ax1.yaxis.set_visible(False)
         ax1.tick_params(top=False, left=False, right=False, bottom=True)
+        ax1.set_ylim(-0.5,1)
 
     # get the SPD values and plot
     legend_vals = []
@@ -239,7 +240,6 @@ def plot_multi_spectrum(
     plt.xticks(np.arange(xlim[0], xlim[1]+1, xtick))
     ax0.tick_params(bottom=False)
     ax0.xaxis.set_visible(False)
-    ax0.spines['bottom'].set_color('none')
     if hideyaxis:
         ax0.spines['left'].set_color('none')
         ax0.yaxis.set_visible(False)
@@ -251,6 +251,7 @@ def plot_multi_spectrum(
     ax0.spines['top'].set_color('none')
     ax0.spines['right'].set_color('none')
     ax0.spines['left'].set_smart_bounds(True)
+    ax0.spines['bottom'].set_color('none')
     
     # save the figure if a filename was specified
     if filename:
@@ -267,5 +268,5 @@ def plot_multi_spectrum(
 # for testing
 spd = import_spd('CSVs/test_spd.csv', 'test', weight=0.9, normalize=True)
 spd_2 = import_spd('CSVs/incandescent.csv', 'Incandescent', normalize=True)
-# plot_spectrum(spd, hideyaxis=True, melanopic_curve=True, melanopic_stimulus=True)
-plot_multi_spectrum([spd, spd_2], melanopic_curve=True, hideyaxis=False)
+plot_spectrum(spd, hideyaxis=True, melanopic_curve=True, melanopic_stimulus=True)
+plot_multi_spectrum([spd, spd_2], melanopic_curve=True, hideyaxis=True)
