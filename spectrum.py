@@ -1,5 +1,5 @@
 import csv
-import colour
+from colour import SpectralPowerDistribution, SpectralShape
 
 """
 Imports a CSV and outputs a dictionary with the intensities for each wavelength
@@ -67,7 +67,23 @@ Creates a named SPD usable by the Colour library
 @return SpectralPowerDistribution   The SPD as an object usable by the Colour library
 """
 def create_colour_spd(spd_dict, spd_name):
-    return colour.SpectralPowerDistribution(spd_dict, name=spd_name)
+    return SpectralPowerDistribution(spd_dict, name=spd_name)
+
+
+"""
+Reshapes the SPD by extending it to [360,780] and increasing the resolution to 1 nm
+
+@param SpectralPowerDistribution spd    The SPD to reshape
+@param int min [optional]               The minimum wavelength to extend to
+@param int max [optional]               The maximum wavelength to extend to
+@param int interval [optional]          The nm interval to specify
+
+@return SpectralPowerDistribution       The reshaped SPD
+"""
+def reshape(spd, min=360, max=780, interval=1):
+    spd = spd.extrapolate(SpectralShape(start=min, end=max))
+    spd = spd.interpolate(SpectralShape(interval=interval))
+    return spd
 
 
 """
@@ -82,7 +98,9 @@ Imports a spectral CSV and creates a named SPD usable by the Colour library
 """
 def import_spd(filename, spd_name, weight=1.0, normalize=False):
     spd_dict = import_spectral_csv(filename, weight, normalize)
-    return create_colour_spd(spd_dict, spd_name)
+    spd = create_colour_spd(spd_dict, spd_name)
+    spd = reshape(spd)
+    return spd
 
 
 # debug

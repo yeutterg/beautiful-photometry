@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors
-from colour import SpectralPowerDistribution
+from colour import SpectralPowerDistribution, SpectralShape
+from circadian import get_melanopic_curve, get_visual_curve
 
 # for testing:
 from spectrum import import_spd
@@ -71,25 +72,51 @@ Plots a color spectrum
 @param tuple xlim [optional]                The (min,max) values for the x axis
 @param int xtick [optional]                 The x axis tick spacing
 @param int/float ytick [optional]           The y axis tick spacing
+@param bool melanopic_curve [optional]      Display the melanopic sensitivity curve
+@param bool melanopic_stimulus [optional]   Display the melanopic stimulus (sensitivity curve * SPD)
 """
-def plot_spectrum(spd, figsize=(8,4), filename=None, ylabel='Intensity', hideyaxis=False, suppress=False, xlim=(360,780), xtick=30, ytick=0.2):
+def plot_spectrum(
+        spd, figsize=(8,4), filename=None, ylabel='Intensity', hideyaxis=False, suppress=False, 
+        xlim=(360,780), xtick=30, ytick=0.2, melanopic_curve=False, melanopic_stimulus=False
+    ):
+    # generate the color spectrum
     norm = plt.Normalize(*xlim)
     wl = np.arange(xlim[0],xlim[1]+1,2)
     colorlist = list(zip(norm(wl),[wavelength_to_rgb(w) for w in wl]))
     spectralmap = matplotlib.colors.LinearSegmentedColormap.from_list("spectrum", colorlist)
 
+    # create the subplot
     fig, ax = plt.subplots(1, 1, figsize=figsize, tight_layout=True)
 
-    # Get the SPD values and plot
+    # get the SPD values and plot
     wavelengths = spd.wavelengths
     values = spd.values
     plt.plot(wavelengths, values, linestyle='None')
+
+    # plot melanopic curve
+    if melanopic_curve or melanopic_stimulus:
+        melanopic_spd = get_melanopic_curve()
+
+        # plot normalized melanopic curve
+        if melanopic_curve:
+            mel_wavelengths = melanopic_spd.wavelengths
+            mel_values = melanopic_spd.values
+            plt.fill(mel_wavelengths, mel_values, facecolor='gray', alpha=0.2)
+
+        # plot melanopic stimulus of the SPD in question
+        if melanopic_stimulus:
+            mel_spd_2 = melanopic_spd.copy()
+            spd_2 = spd.copy()
+            mel_stimulus = np.multiply(mel_spd_2.values, spd_2.values)
+            plt.plot(mel_spd_2.wavelengths, mel_stimulus, color='white', linewidth=0.2)
+            plt.fill(mel_spd_2.wavelengths, mel_stimulus, facecolor='white', alpha=0.2)
 
     y = np.linspace(0, max(values), 100)
     X,Y = np.meshgrid(wavelengths, y)
 
     extent=(np.min(wavelengths), np.max(wavelengths), 0, np.max(values))
 
+    # show the image and axis labels
     plt.imshow(X, clim=xlim,  extent=extent, cmap=spectralmap, aspect='auto')
     plt.xlabel('Wavelength (nm)')
     plt.ylabel(ylabel)
@@ -115,15 +142,15 @@ def plot_spectrum(spd, figsize=(8,4), filename=None, ylabel='Intensity', hideyax
     ax.spines['left'].set_smart_bounds(True)
     ax.spines['bottom'].set_smart_bounds(True)
     
-    # Save the figure if a filename was specified
+    # save the figure if a filename was specified
     if filename:
         plt.savefig(filename, dpi=300)
 
-    # Show the plot
+    # show the plot
     if not suppress:
         plt.show()
 
 
 # for testing
 spd = import_spd('CSVs/test_spd.csv', 'test', weight=0.9, normalize=True)
-plot_spectrum(spd, hideyaxis=True)
+plot_spectrum(spd, hideyaxis=True, melanopic_curve=True, melanopic_stimulus=True)
