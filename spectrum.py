@@ -15,7 +15,7 @@ Imports a CSV and outputs a dictionary with the intensities for each wavelength
 def import_spectral_csv(filename, weight=1.0, normalize=False):
     spd = {}
 
-    with open(filename) as csvFile:
+    with open(filename, mode='r', encoding='utf-8-sig') as csvFile:
         reader = csv.reader(csvFile, delimiter=',')
 
         for count, row in enumerate(reader):
