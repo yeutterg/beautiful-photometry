@@ -189,11 +189,15 @@ Plots multiple SPDs
 @param bool melanopic_curve [optional]      Display the melanopic sensitivity curve
 @param bool colorbar [optional]             Display the color reference bar
 @param bool showlegend [optional]           Display the legend
+@param string legend_loc [optional]         The legend location. Default is 'upper left'
+                                            Possible values: 'best', 'upper right', 'upper left', 'lower left', 
+                                                            'lower right', 'right', 'center left', 'center right',
+                                                            'lower center', 'upper center', 'center'
 """
 def plot_multi_spectrum(
         spds, figsize=(8,4), filename=None, ylabel='Intensity', hideyaxis=False, suppress=False, 
         xlim=(360,780), xtick=30, ytick=0.2, melanopic_curve=False,
-        colorbar=True, showlegend=True
+        colorbar=True, showlegend=True, legend_loc='upper left'
     ):
     # TODO fix non-colorbar display
 
@@ -230,7 +234,7 @@ def plot_multi_spectrum(
 
     # show the legend
     if showlegend:
-        ax0.legend(legend_vals)
+        ax0.legend(legend_vals, loc=legend_loc)
 
     # plot melanopic curve
     plot_melanopic_curve(ax0, melanopic_curve)
