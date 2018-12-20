@@ -4,7 +4,8 @@ from colour import SpectralPowerDistribution
 import numpy as np
 
 melanopic_curve = {'curve': None, 'normalized': True, 'weight': 1.0}
-visual_curve = {'curve': None, 'normalized': True, 'weight': 1.0}
+scotopic_curve = {'curve': None, 'normalized': True, 'weight': 1.0}
+photopic_curve = {'curve': None, 'normalized': True, 'weight': 1.0}
 
 """
 Gets the melanopic sensitivity curve
@@ -22,21 +23,45 @@ def get_melanopic_curve(normalize=True, weight=1.0):
 
     return melanopic_curve['curve']
 
+
 """
-Gets the visual sensitivity curve
+Gets the scotopic sensitivity curve
+
+Note: Using the CIE 1951 Scotopic Luminosity Curve
+Source: https://web.archive.org/web/20081228115119/http://www.cvrl.org/database/text/lum/scvl.htm
 
 @param bool normalize [optional]        If False, curve will not be normalized to [0,1]
 @param float weight [optional]          The multiplier to apply to the curve
 
-@return SpectralPowerDistribution       The visual SPD
+@return SpectralPowerDistribution       The scotopic SPD
 """
-def get_visual_curve(normalize=True, weight=1.0):
-    if visual_curve['curve'] is None or visual_curve['normalized'] != normalize or visual_curve['weight'] != weight:
-        visual_curve['curve'] = import_spd('CSVs/visual_spd.csv', 'Visual Curve', normalize=normalize, weight=weight)
-        visual_curve['normalized'] = normalize
-        visual_curve['weight'] = weight
+def get_scotopic_curve(normalize=True, weight=1.0):
+    if scotopic_curve['curve'] is None or scotopic_curve['normalized'] != normalize or scotopic_curve['weight'] != weight:
+        scotopic_curve['curve'] = import_spd('CSVs/scotopic_spd.csv', 'Scotopic Curve', normalize=normalize, weight=weight)
+        scotopic_curve['normalized'] = normalize
+        scotopic_curve['weight'] = weight
 
-    return visual_curve['curve']
+    return scotopic_curve['curve']
+
+
+"""
+Gets the photopic (daytime visual) sensitivity curve
+
+Note: Using the Judd-Vos modified CIE 2-deg photopic luminosity curve from 1978
+Source: https://web.archive.org/web/20081228083025/http://www.cvrl.org/database/text/lum/vljv.htm
+
+@param bool normalize [optional]        If False, curve will not be normalized to [0,1]
+@param float weight [optional]          The multiplier to apply to the curve
+
+@return SpectralPowerDistribution       The photopic SPD
+"""
+def get_photopic_curve(normalize=True, weight=1.0):
+    if photopic_curve['curve'] is None or photopic_curve['normalized'] != normalize or photopic_curve['weight'] != weight:
+        photopic_curve['curve'] = import_spd('CSVs/photopic_spd.csv', 'Photopic Curve', normalize=normalize, weight=weight)
+        photopic_curve['normalized'] = normalize
+        photopic_curve['weight'] = weight
+
+    return photopic_curve['curve']
 
 
 """
@@ -54,16 +79,30 @@ def melanopic_response(spd, toround=True):
 
 
 """
-Calculates the visual response (used to calculate melanopic ratio) for a given light source
+Calculates the visual/photopic response for a given light source
 
 @param SpectralPowerDistribution spd            The spectral power distribution
 @param bool toround [optional]                  Whether to round to output to a 1 decimal place
 
-@return float                                   The visual response
+@return float                                   The photopic response
 """
-def visual_response(spd, toround=True):
-    visual_spd = get_visual_curve()
-    resp = np.sum(np.multiply(visual_spd.values, spd.values))
+def photopic_response(spd, toround=True):
+    photopic_spd = get_photopic_curve()
+    resp = np.sum(np.multiply(photopic_spd.values, spd.values))
+    return round_output(resp, toround, 1)
+
+
+"""
+Calculates the scotopic (low-light visual) response for a given light source
+
+@param SpectralPowerDistribution spd            The spectral power distribution
+@param bool toround [optional]                  Whether to round to output to a 1 decimal place
+
+@return float                                   The scotopic response
+"""
+def scotopic_response(spd, toround=True):
+    scotopic_spd = get_scotopic_curve()
+    resp = np.sum(np.multiply(scotopic_spd.values, spd.values))
     return round_output(resp, toround, 1)
 
 
@@ -76,10 +115,31 @@ Calculates the melanopic ratio for a given light source
 @return float                                   The melanopic ratio
 """
 def melanopic_ratio(spd, toround=True):
-    # TODO: This is currently (slightly) out of the spec defined by WELL, as it calculates
-    # on an interpolated curve instead of every 5 nm. Regardless, the result only differs
-    # by a few thousandths 
-    return round_output(melanopic_response(spd, False) / visual_response(spd, False) * 1.218, toround)
+    return round_output(melanopic_response(spd, False) / photopic_response(spd, False) * 1.218, toround)
+
+
+"""
+Calculates the S/P ratio for a given light source
+
+@param SpectralPowerDistribution spd            The spectral power distribution
+@param bool toround [optional]                  Whether to round to output to 2 decimal places
+
+@return float                                   The S/P ratio
+"""
+def scotopic_photopic_ratio(spd, toround=True):
+    return round_output(scotopic_response(spd, False) / photopic_response(spd, False), toround)
+
+
+"""
+Calculates the M/P ratio for a given light source
+
+@param SpectralPowerDistribution spd            The spectral power distribution
+@param bool toround [optional]                  Whether to round to output to 2 decimal places
+
+@return float                                   The M/P ratio
+"""
+def melanopic_photopic_ratio(spd, toround=True):
+    return round_output(melanopic_response(spd, False) / photopic_response(spd, False), toround)
 
 
 """
