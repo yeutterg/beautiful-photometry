@@ -2,7 +2,17 @@
 
 A set of tools to compute lighting photometric data and generate beautiful graphics.
 
+For example, it can output a color spectrum showing the melanopic sensitivity curve:
+
+![Color Spectrum](/out/daylight.png)
+
+Or it can show a comparison among spectra:
+
+![Spectral Comparison](/out/Traditional%20Source%20Comparison.png)
+
 This is an early work in progress!
+
+See also: [Beautiful Flicker](https://github.com/yeutterg/beautiful-flicker)
 
 ## Installation
 
