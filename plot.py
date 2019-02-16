@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors
 from colour import SpectralPowerDistribution, SpectralShape
-from circadian import get_melanopic_curve
+from human_circadian import get_melanopic_curve
 
 # for testing:
 from spectrum import import_spd
