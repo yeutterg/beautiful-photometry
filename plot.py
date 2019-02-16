@@ -229,6 +229,13 @@ def plot_multi_spectrum(
     legend_vals = []
     for spd in spds:    
         values = spd.values
+
+        add_len = len(wavelengths) - len(values)
+        if add_len > 0:
+            # resize values array if it is short
+            
+            values = np.pad(values, (0,add_len), 'constant')
+
         legend_vals.append(spd.strict_name)
         ax0.plot(wavelengths, values)
 
