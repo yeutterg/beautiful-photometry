@@ -62,7 +62,7 @@ Adds a line to a CSV file
 @param List row             The row to add
 """
 def add_row_to_csv(filename, row):
-    with open(filename, mode='a', encoding='utf-8-sig') as csvFile:
+    with open(filename, mode='a', encoding='utf-8-sig', newline='') as csvFile:
         writer = csv.writer(csvFile)
         writer.writerow(row)
 
