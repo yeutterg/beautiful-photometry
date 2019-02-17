@@ -1,27 +1,21 @@
+"""
+Calculations related to the human circadian system
+"""
 import numpy as np
 
-from spectrum import import_spd
+from spectrum import get_reference_spectrum
 from utils import round_output
 from colour import SpectralPowerDistribution
 from human_visual import photopic_response
 
-melanopic_curve = {'curve': None, 'normalized': True, 'weight': 1.0}
-
 """
 Gets the melanopic sensitivity curve
 
-@param bool normalize [optional]        If False, curve will not be normalized to [0,1]
-@param float weight [optional]          The multiplier to apply to the curve
-
 @return SpectralPowerDistribution       The melanopic SPD
 """
-def get_melanopic_curve(normalize=True, weight=1.0):
-    if melanopic_curve['curve'] is None or melanopic_curve['normalized'] != normalize or melanopic_curve['weight'] != weight:
-        melanopic_curve['curve'] = import_spd('CSVs/melanopic_spd.csv', 'Melanopic Curve', normalize=normalize, weight=weight)
-        melanopic_curve['normalized'] = normalize
-        melanopic_curve['weight'] = weight
-
-    return melanopic_curve['curve']
+def get_melanopic_curve():
+    spectrum = get_reference_spectrum('Melanopic')
+    return spectrum['curve']
 
 
 """

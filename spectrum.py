@@ -1,5 +1,10 @@
+"""
+Tools for importing and processing Spectral Power Distributions
+"""
 import csv
 from colour import SpectralPowerDistribution, SpectralShape
+
+reference_spectra = []
 
 """
 Imports a CSV and outputs a dictionary with the intensities for each wavelength
@@ -71,6 +76,64 @@ def create_colour_spd(spd_dict, spd_name):
 
 
 """
+Imports reference SPDs from the database
+
+@param string filename              CSV file that serves as the SPD database
+"""
+def import_reference_spectra(filename='source_illuminants.csv'):
+    global reference_spectra
+
+    with open(filename, mode='r', encoding='utf-8-sig') as csvFile:
+        reader = csv.reader(csvFile, delimiter=',')
+
+        wavelengths = next(reader)[4:]
+
+        for count, row in enumerate(reader):
+            # extract data from the row
+            name = row[0]
+            description = row[1]
+            spd = row[4:]
+
+            # create the SPD dict
+            spd_dict = {} 
+            for i, val in enumerate(spd):
+                if val is not '':
+                    spd_dict[int(wavelengths[i])] = float(val)
+            spd_dict = normalize_spd(spd_dict)
+
+            # create the SpectralPowerDistribution
+            colour_spd = create_colour_spd(spd_dict, description)
+            colour_spd = reshape(colour_spd)
+
+            # prepare the dict to add to reference illuminants
+            out_dict = {}
+            out_dict['curve'] = colour_spd
+            out_dict['name'] = name
+            out_dict['description'] = description
+            out_dict['normalized'] = True
+            out_dict['weight'] = 1.0
+            reference_spectra.append(out_dict)
+
+
+"""
+The getter for reference spectra (such as CIE-A, L-Cone, PAR)
+
+@param String name      The name of the spectrum
+
+@return dict            The reference spectrum
+"""
+def get_reference_spectrum(name):
+    # if not initialized, first import the spectra into memory
+    if not reference_spectra:
+        import_reference_spectra()
+    
+    # then find the spectrum
+    for spectrum in reference_spectra:
+        if spectrum['name'] == name:
+            return spectrum
+
+
+"""
 Reshapes the SPD by extending it to [360,780] and increasing the resolution to 1 nm
 
 @param SpectralPowerDistribution spd    The SPD to reshape
@@ -101,9 +164,4 @@ def import_spd(filename, spd_name, weight=1.0, normalize=False):
     spd = create_colour_spd(spd_dict, spd_name)
     spd = reshape(spd)
     return spd
-
-
-# debug
-# spd = import_spd('CSVs/test_spd.csv', 'test', weight=0.9, normalize=True)
-# print(spd)
         

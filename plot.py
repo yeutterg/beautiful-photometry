@@ -1,3 +1,6 @@
+"""
+SPD Plotting Tools
+"""
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors
@@ -203,7 +206,7 @@ def plot_multi_spectrum(
 
     # create the figure
     fig, (ax0, ax1) = plt.subplots(2, 1, figsize=figsize, tight_layout=True, sharex=True, gridspec_kw={'height_ratios':[8,1], 'hspace':0})
-    wavelengths = spds[0].wavelengths
+    wavelengths = np.arange(xlim[0], xlim[1]+1)
 
     # plot the color bar
     if colorbar:
@@ -229,12 +232,18 @@ def plot_multi_spectrum(
     legend_vals = []
     for spd in spds:    
         values = spd.values
+        spd_wls = spd.wavelengths
 
+        # resize values array if it is shorter than wavelengths array
         add_len = len(wavelengths) - len(values)
         if add_len > 0:
-            # resize values array if it is short
-            
             values = np.pad(values, (0,add_len), 'constant')
+
+        # remove values outside xlim
+        elif add_len < 0:
+            arr_start = np.argwhere(spd_wls == xlim[0])[0][0]
+            arr_end = np.argwhere(spd_wls == xlim[1])[0][0]
+            values = values[arr_start:arr_end+1]
 
         legend_vals.append(spd.strict_name)
         ax0.plot(wavelengths, values)
