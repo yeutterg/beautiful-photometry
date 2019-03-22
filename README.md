@@ -38,16 +38,6 @@ Alternatively, you can run this project in Docker. This is more likely to work a
 
 Instructions for Docker are provided in [DOCKER.md](DOCKER.md)
 
-## Use
-
-### Running the Jupyter Notebook
-
-To open the Jupyter Notebook, run:
-
-```
-jupyter notebook beautiful-photometry.ipynb
-```
-
 ## License
 
 Distributed under the [MIT license](/LICENSE).
