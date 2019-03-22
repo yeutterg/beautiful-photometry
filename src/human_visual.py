@@ -3,8 +3,8 @@ Calculations related to the human visual system, such as rods and cones
 """
 import numpy as np
 
-from spectrum import get_reference_spectrum
-from utils import round_output
+from .spectrum import get_reference_spectrum
+from .utils import round_output
 from colour import SpectralPowerDistribution
 
 """

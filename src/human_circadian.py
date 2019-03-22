@@ -3,10 +3,10 @@ Calculations related to the human circadian system
 """
 import numpy as np
 
-from spectrum import get_reference_spectrum
-from utils import round_output
+from .spectrum import get_reference_spectrum
+from .utils import round_output
 from colour import SpectralPowerDistribution
-from human_visual import photopic_response
+from .human_visual import photopic_response
 
 """
 Gets the melanopic sensitivity curve

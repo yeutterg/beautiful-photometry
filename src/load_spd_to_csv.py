@@ -10,7 +10,7 @@ python load_spd_to_csv.py source_illuminants.csv CSVs/melanopic_spd.csv Melanopi
 import sys
 import csv
 
-from spectrum import import_spectral_csv
+from .spectrum import import_spectral_csv
 
 """
 Gets the column names of the target database

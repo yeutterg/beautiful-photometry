@@ -15,13 +15,13 @@ for arg in "$@"; do
 done
 
 # Run the container in the background and get its ID
-CONTAINER_ID=`docker run --rm -p 8888:8888 -d -v /$PWD:/beautiful-flicker beautiful-flicker tail -f /dev/null`
+CONTAINER_ID=`docker run --rm -p 8888:8888 -d -v /$PWD:/beautiful-photometry beautiful-photometry tail -f /dev/null`
 echo "Opened container $CONTAINER_ID"
 
 if [ "$JUPYTER" = true ]; then
     # Start the jupyter server
     # The URL to run the server will be http://localhost:8888/?token= plus the token listed in the output
-    docker exec -ti $CONTAINER_ID jupyter notebook --ip=0.0.0.0 --port=8888 --allow-root --no-browser /beautiful-flicker/examples
+    docker exec -ti $CONTAINER_ID jupyter notebook --ip=0.0.0.0 --port=8888 --allow-root --no-browser /beautiful-photometry/
 else
     # Open a bash shell inside the container
     docker exec -ti $CONTAINER_ID sh

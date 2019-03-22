@@ -83,6 +83,10 @@ Imports reference SPDs from the database
 def import_reference_spectra(filename='source_illuminants.csv'):
     global reference_spectra
 
+    import os
+    os.chdir(os.path.dirname(__file__))
+    # print(os.getcwd())
+
     with open(filename, mode='r', encoding='utf-8-sig') as csvFile:
         reader = csv.reader(csvFile, delimiter=',')
 
