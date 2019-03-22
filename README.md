@@ -14,15 +14,29 @@ This is an early work in progress!
 
 See also: [Beautiful Flicker](https://github.com/yeutterg/beautiful-flicker)
 
-## Installation
+## Install and Use
 
-Make sure you have Python installed in your environment. This only works with Python 3+.
+### Local Version
+
+Make sure you have Python installed in your environment. This only works with Python 3.5+.
 
 Clone this repository, cd to the downloaded directory, and install necessary dependencies:
 
+```console
+pip install -r src/requirements.txt
 ```
-pip install -r requirements.txt
+
+To use Jupyter Notebooks, run from the root of this project:
+
+```console
+jupyter notebook examples/
 ```
+
+### Docker Version
+
+Alternatively, you can run this project in Docker. This is more likely to work across different systems.
+
+Instructions for Docker are provided in [DOCKER.md](DOCKER.md)
 
 ## Use
 
