@@ -112,6 +112,7 @@ Plots a single SPD color spectrum
 @param string filename [optional]           If specified, will save plot as the specified filename
 @param string ylabel [optional]             If specified, this will replace 'Intensity' on the y axis
 @param bool hideyaxis [optional]            If True, the y axis will not be shown
+@param string title [optional]              If not None, display the specified title text
 @param bool supress [optional]              If True, the plot will not be shown
 @param tuple xlim [optional]                The (min,max) values for the x axis
 @param int xtick [optional]                 The x axis tick spacing
@@ -120,7 +121,7 @@ Plots a single SPD color spectrum
 @param bool melanopic_stimulus [optional]   Display the melanopic stimulus (sensitivity curve * SPD)
 """
 def plot_spectrum(
-        spd, figsize=(8,4), filename=None, ylabel='Intensity', hideyaxis=False, suppress=False, 
+        spd, figsize=(8,4), filename=None, ylabel='Intensity', hideyaxis=False, suppress=False, title=None,
         xlim=(360,780), xtick=30, ytick=0.2, melanopic_curve=False, melanopic_stimulus=False
     ):
     # create the subplot
@@ -167,6 +168,10 @@ def plot_spectrum(
     ax.spines['right'].set_color('none')
     ax.spines['left'].set_smart_bounds(True)
     ax.spines['bottom'].set_smart_bounds(True)
+
+    # show title
+    if title:
+        plt.title(title)
     
     # save the figure if a filename was specified
     if filename:
@@ -186,6 +191,7 @@ Plots multiple SPDs
 @param string ylabel [optional]             If specified, this will replace 'Intensity' on the y axis
 @param bool hideyaxis [optional]            If True, the y axis will not be shown
 @param bool supress [optional]              If True, the plot will not be shown
+@param string title [optional]              If not None, display the specified title text
 @param tuple xlim [optional]                The (min,max) values for the x axis
 @param int xtick [optional]                 The x axis tick spacing
 @param int/float ytick [optional]           The y axis tick spacing
@@ -198,14 +204,15 @@ Plots multiple SPDs
                                                             'lower center', 'upper center', 'center'
 """
 def plot_multi_spectrum(
-        spds, figsize=(8,4), filename=None, ylabel='Intensity', hideyaxis=False, suppress=False, 
+        spds, figsize=(8,4), filename=None, ylabel='Intensity', hideyaxis=False, suppress=False, title=None,
         xlim=(360,780), xtick=30, ytick=0.2, melanopic_curve=False,
         colorbar=True, showlegend=True, legend_loc='upper left'
     ):
     # TODO fix non-colorbar display
 
     # create the figure
-    fig, (ax0, ax1) = plt.subplots(2, 1, figsize=figsize, tight_layout=True, sharex=True, gridspec_kw={'height_ratios':[8,1], 'hspace':0})
+    fig, (ax0, ax1) = plt.subplots(2, 1, figsize=figsize, tight_layout=True, sharex=True, \
+                                   gridspec_kw={'height_ratios':[8,1], 'hspace':0})
     wavelengths = np.arange(xlim[0], xlim[1]+1)
 
     # plot the color bar
@@ -268,6 +275,10 @@ def plot_multi_spectrum(
     else:
         plt.yticks(np.arange(0.0, np.max(values)+ytick, ytick))
         ax0.set_ylabel(ylabel)
+
+    # show title
+    if title:
+        plt.title(title)
 
     # change the style of the axis spines
     ax0.spines['top'].set_color('none')
