@@ -3,34 +3,34 @@ Tools for importing and processing Spectral Power Distributions
 """
 import csv
 from colour import SpectralPowerDistribution, SpectralShape
+from .photometer import uprtek_import_spectrum
+from os import listdir
+from os.path import isfile, join
 
 reference_spectra = []
 
-"""
-Imports a CSV and outputs a dictionary with the intensities for each wavelength
 
+"""Imports a spectral CSV data file and outputs a dictionary with the intensities for each wavelength
 
-@param string filename              CSV file with wavelengths in the first column, intensities in the second. No header data.
-@param float weight [optional]      A multplier to help normalize the spectral data
-@param bool normalize [optional]    normalize the spectrum to [0,1]
-
-@return dict                        A dictionary with the wavelengths and intensities, e.g.:
+Parameters
+----------
+filename : String
+    The filename to import
+    
+Returns
+-------
+dict
+    A dictionary with the wavelengths and intensities, e.g.:
                                     {380: 0.048, 381: 0.051, ...}
 """
-def import_spectral_csv(filename, weight=1.0, normalize=False):
+def import_spectral_csv(filename):
     spd = {}
-
+    
     with open(filename, mode='r', encoding='utf-8-sig') as csvFile:
         reader = csv.reader(csvFile, delimiter=',')
 
         for count, row in enumerate(reader):
             spd[int(row[0])] = float(row[1])
-
-    if normalize:
-        spd = normalize_spd(spd)
-
-    if weight is not 1.0:
-        spd = weight_spd(spd, weight)
 
     return spd
 
@@ -153,19 +153,80 @@ def reshape(spd, min=360, max=780, interval=1):
     return spd
 
 
-"""
-Imports a spectral CSV and creates a named SPD usable by the Colour library
+"""Imports a spectral data file and creates a named SPD usable by the Colour library
 
-@param string filename              CSV file with wavelengths in the first column, intensities in the second. No header data.
-@param string spd_name              The name of the SPD
-@param float weight [optional]      A multplier to help normalize the spectral data
-@param bool normalize [optional]    Normalize the spectrum to [0,1]
-
-@return SpectralPowerDistribution   The SPD as an object usable by the Colour library
+Parameters
+----------
+filename : String
+    The filename to import
+spd_name : String or None
+    The name of the SPD. If None, the name will match the filename, minus the extension
+weight : float
+    A multplier to help normalize the spectral data
+normalize : bool
+    If True, normalize the spectrum to [0,1]
+photometer : String or None
+    If specified, imports a data file specific to that meter brand/model. Current options are: uprtek
+    If None, file must be a CSV in the format [nm, intensity] with no header data
+    
+Returns
+-------
+SpectralPowerDistribution
+    The SPD as an object usable by the Colour library
 """
-def import_spd(filename, spd_name, weight=1.0, normalize=False):
-    spd_dict = import_spectral_csv(filename, weight, normalize)
+def import_spd(filename, spd_name=None, weight=1.0, normalize=False, photometer=None):
+    if photometer == 'uprtek':
+        spd_dict = uprtek_import_spectrum(filename)
+    else:
+        spd_dict = import_spectral_csv(filename)
+
+    if not spd_name:
+        spd_name = filename.split(".")[-2].split('/')[-1]
+
+    if normalize:
+        spd_dict = normalize_spd(spd_dict)
+
+    if weight is not 1.0:
+        spd_dict = weight_spd(spd_dict, weight)
+
     spd = create_colour_spd(spd_dict, spd_name)
     spd = reshape(spd)
     return spd
+
+
+"""Imports an entire directory of SPD files to a dictionary
+
+Note: for now, this only works in the top level of the directory
+Note: All SPDs will be normalized, and the SPD name will match the file name minus the extension
+Note: the data format should be the same for all files in the directory
+
+Parameters
+----------
+directory : String
+    The directory to import
+photometer : String or None
+    If specified, imports a data file specific to that meter brand/model. Current options are: uprtek
+    If None, file must be a CSV in the format [nm, intensity] with no header data
+printNames : bool
+    If True, prints the names of all imported files
+    
+Returns
+-------
+dict
+    A dict of SpectralPowerDistribution data
+"""
+def import_spd_batch(directory: str, photometer=None, printNames=True):
+    spds = {}
+    files = [f for f in listdir(directory) if isfile(join(directory, f)) if not f.startswith('.')]
+
+    for file in files:
+        spd = import_spd(directory + file, normalize=True, photometer=photometer)
+        spds[spd.strict_name] = spd
+
+    if printNames:
+        print('Imported the following SPDs:')
+        for k in spds.keys():
+            print(k)
+
+    return spds
         
