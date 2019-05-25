@@ -185,7 +185,7 @@ def plot_spectrum(
 """
 Plots multiple SPDs
 
-@param SpectralPowerDistribution spds       The SPDs
+@param list spds                            The SPDs in a list
 @param tuple figsize [optional]             The (width,height) of the plotted figure
 @param string filename [optional]           If specified, will save plot as the specified filename
 @param string ylabel [optional]             If specified, this will replace 'Intensity' on the y axis
@@ -278,7 +278,7 @@ def plot_multi_spectrum(
 
     # show title
     if title:
-        plt.title(title)
+        plt.suptitle(title)
 
     # change the style of the axis spines
     ax0.spines['top'].set_color('none')
