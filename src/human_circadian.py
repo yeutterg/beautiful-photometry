@@ -2,11 +2,12 @@
 Calculations related to the human circadian system
 """
 import numpy as np
+from math import log10
 
 from .spectrum import get_reference_spectrum
 from .utils import round_output
 from colour import SpectralPowerDistribution
-from .human_visual import photopic_response
+from .human_visual import photopic_response, get_photopic_curve
 
 """
 Gets the melanopic sensitivity curve
@@ -16,6 +17,33 @@ Gets the melanopic sensitivity curve
 def get_melanopic_curve():
     spectrum = get_reference_spectrum('Melanopic')
     return spectrum['curve']
+
+
+"""
+Computes the Spectral G-Index
+
+Assumes a photopic reponse only
+Uses the equation found here: https://en.wikipedia.org/wiki/Spectral_G-index
+
+@param SpectralPowerDistribution spd            The spectral power distribution
+
+@return float                                   The Spectral G-Index
+"""
+def spectral_g_index(spd):
+    photopic_spd = get_photopic_curve()
+
+    # numerator: sum spectral values from 380 to 500 nm
+    numer = 0.0
+    for i in range(380,501):
+        numer += spd[i] 
+
+    # demoninator: sum spectral values from 380 to 780 nm * the luminosity function
+    denom = 0.0
+    for i in range(380,781):
+        denom += spd[i] * photopic_spd[i]
+
+    # # perform the overall calculation
+    return -2.5 * log10(numer/denom)
 
 
 """
