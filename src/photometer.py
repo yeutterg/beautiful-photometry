@@ -38,3 +38,34 @@ def uprtek_import_spectrum(filename: str):
             spd[int(row[0][0:3])] = float(row[1])
 
     return spd
+
+
+"""Imports a UPRtek data file and outputs a dictionary with the R-Values
+
+Note: UPRtek names these files as .xls, but they are actually formatted as tab-delimited text files
+Note2: This has only been tested with the UPRtek CV600
+
+Parameters
+----------
+filename : String
+    The filename to import
+    
+Returns
+-------
+dict
+    A dictionary with the R-Values, e.g.:
+                                    {'R1': 98.887482, 'R2': 99.234245, ...}
+"""
+def uprtek_import_r_vals(filename: str):
+    # Note: tested only with the UPRtek CV600
+    r_vals = {}
+
+    with open(filename, mode='r', encoding='us-ascii') as csvFile:
+        reader = csv.reader(csvFile, delimiter='\t')
+
+        for row in itertools.islice(reader, 19, 34):
+            r_vals[row[0]] = float(row[1])
+
+    print(r_vals)
+
+    return r_vals
