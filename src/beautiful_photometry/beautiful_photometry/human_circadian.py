@@ -6,7 +6,7 @@ from math import log10
 
 from .spectrum import get_reference_spectrum
 from .utils import round_output
-from colour import SpectralPowerDistribution
+from colour import SpectralDistribution
 from .human_visual import photopic_response, get_photopic_curve
 
 """

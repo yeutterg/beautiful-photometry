@@ -6,13 +6,13 @@ from math import log10
 
 from .spectrum import get_reference_spectrum
 from .utils import round_output
-from colour import SpectralPowerDistribution
+from colour import SpectralDistribution
 from .human_visual import photopic_response, get_photopic_curve
 
 """
 Gets the melanopic sensitivity curve
 
-@return SpectralPowerDistribution       The melanopic SPD
+@return SpectralDistribution       The melanopic SPD
 """
 def get_melanopic_curve():
     spectrum = get_reference_spectrum('Melanopic')
@@ -25,7 +25,7 @@ Computes the Spectral G-Index
 Assumes a photopic reponse only
 Uses the equation found here: https://en.wikipedia.org/wiki/Spectral_G-index
 
-@param SpectralPowerDistribution spd            The spectral power distribution
+@param SpectralDistribution spd            The spectral power distribution
 
 @return float                                   The Spectral G-Index
 """
@@ -49,7 +49,7 @@ def spectral_g_index(spd):
 """
 Calculates the melanopic response (used to compute melanopic ratio) for a given light source
 
-@param SpectralPowerDistribution spd            The spectral power distribution
+@param SpectralDistribution spd            The spectral power distribution
 @param bool toround [optional]                  Whether to round to output to a 1 decimal place
 
 @return float                                   The melanopic response
@@ -63,7 +63,7 @@ def melanopic_response(spd, toround=True):
 """
 Calculates the melanopic ratio for a given light source
 
-@param SpectralPowerDistribution spd            The spectral power distribution
+@param SpectralDistribution spd            The spectral power distribution
 @param bool toround [optional]                  Whether to round to output to 2 decimal places
 
 @return float                                   The melanopic ratio
@@ -75,7 +75,7 @@ def melanopic_ratio(spd, toround=True):
 """
 Calculates the M/P ratio for a given light source
 
-@param SpectralPowerDistribution spd            The spectral power distribution
+@param SpectralDistribution spd            The spectral power distribution
 @param bool toround [optional]                  Whether to round to output to 2 decimal places
 
 @return float                                   The M/P ratio
@@ -87,7 +87,7 @@ def melanopic_photopic_ratio(spd, toround=True):
 """
 Calculates melanopic lumens for a given light source
 
-@param SpectralPowerDistribution/float input    If SPD, calculates the melanopic ratio. 
+@param SpectralDistribution/float input    If SPD, calculates the melanopic ratio. 
                                                 If float, assumes the melanopic ratio is already provided.
 @param int/float lumens                         The lumens of the light source
 @param bool toround [optional]                  Whether to round to output to a whole number
@@ -95,7 +95,7 @@ Calculates melanopic lumens for a given light source
 @return int/float                               The melanopic lumens result
 """
 def melanopic_lumens(input, lumens, toround=True):
-    if type(input) == SpectralPowerDistribution:
+    if type(input) == SpectralDistribution:
         # SPD given, calculate the melanopic ratio
         mel_ratio = melanopic_ratio(input, toround=False)
     else:

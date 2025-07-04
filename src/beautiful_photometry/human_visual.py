@@ -5,12 +5,12 @@ import numpy as np
 
 from .spectrum import get_reference_spectrum
 from .utils import round_output
-from colour import SpectralPowerDistribution
+from colour import SpectralDistribution
 
 """
 Gets the scotopic sensitivity curve
 
-@return SpectralPowerDistribution       The scotopic SPD
+@return SpectralDistribution       The scotopic SPD
 """
 def get_scotopic_curve():
     spectrum = get_reference_spectrum('Scotopic')
@@ -20,7 +20,7 @@ def get_scotopic_curve():
 """
 Gets the photopic (daytime visual) sensitivity curve
 
-@return SpectralPowerDistribution       The photopic SPD
+@return SpectralDistribution       The photopic SPD
 """
 def get_photopic_curve():
     spectrum = get_reference_spectrum('Photopic')
@@ -30,7 +30,7 @@ def get_photopic_curve():
 """
 Gets the L Cone (Red/Erythropic) sensitivity curve
 
-@return SpectralPowerDistribution       The L Cone SPD
+@return SpectralDistribution       The L Cone SPD
 """
 def get_l_cone_curve():
     spectrum = get_reference_spectrum('L Cone')
@@ -40,7 +40,7 @@ def get_l_cone_curve():
 """
 Gets the M Cone (Green/Chloropic) sensitivity curve
 
-@return SpectralPowerDistribution       The M Cone SPD
+@return SpectralDistribution       The M Cone SPD
 """
 def get_m_cone_curve():
     spectrum = get_reference_spectrum('M Cone')
@@ -50,7 +50,7 @@ def get_m_cone_curve():
 """
 Gets the S Cone (Blue/Cyanopic) sensitivity curve
 
-@return SpectralPowerDistribution       The S Cone SPD
+@return SpectralDistribution       The S Cone SPD
 """
 def get_s_cone_curve():
     spectrum = get_reference_spectrum('S Cone')
@@ -60,7 +60,7 @@ def get_s_cone_curve():
 """
 Calculates the visual/photopic response for a given light source
 
-@param SpectralPowerDistribution spd            The spectral power distribution
+@param SpectralDistribution spd            The spectral power distribution
 @param bool toround [optional]                  Whether to round to output to a 1 decimal place
 
 @return float                                   The photopic response
@@ -74,7 +74,7 @@ def photopic_response(spd, toround=True):
 """
 Calculates the scotopic (low-light visual) response for a given light source
 
-@param SpectralPowerDistribution spd            The spectral power distribution
+@param SpectralDistribution spd            The spectral power distribution
 @param bool toround [optional]                  Whether to round to output to a 1 decimal place
 
 @return float                                   The scotopic response
@@ -88,7 +88,7 @@ def scotopic_response(spd, toround=True):
 """
 Calculates the S/P ratio for a given light source
 
-@param SpectralPowerDistribution spd            The spectral power distribution
+@param SpectralDistribution spd            The spectral power distribution
 @param bool toround [optional]                  Whether to round to output to 2 decimal places
 
 @return float                                   The S/P ratio

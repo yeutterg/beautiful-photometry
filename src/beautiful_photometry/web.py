@@ -17,7 +17,7 @@ import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
 import numpy as np
-from colour import SpectralPowerDistribution, SpectralShape
+from colour import SpectralDistribution, SpectralShape
 import tempfile
 
 from .spectrum import import_spd, normalize_spd, create_colour_spd, reshape
@@ -253,7 +253,7 @@ def process_uploaded_file(
     normalize: bool = False, 
     photometer: Optional[str] = None,
     upload_folder: str = 'uploads'
-) -> SpectralPowerDistribution:
+) -> SpectralDistribution:
     """Process an uploaded file and return an SPD object."""
     if not spd_name:
         spd_name = secure_filename(file.filename).split('.')[0]
@@ -272,7 +272,7 @@ def process_uploaded_file(
             temp_path.unlink()
 
 
-def calculate_spd_metrics(spd: SpectralPowerDistribution) -> Dict[str, Any]:
+def calculate_spd_metrics(spd: SpectralDistribution) -> Dict[str, Any]:
     """Calculate all metrics for a given SPD."""
     return {
         'name': spd.strict_name,
@@ -302,10 +302,10 @@ def create_plot_image(plot_func, *args, **kwargs) -> str:
 
 
 # For backward compatibility
-def run_app():
+def run_app(host='0.0.0.0', port=8765, debug=True):
     """Run the Flask application (for development)."""
     app = create_app()
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=debug, host=host, port=port)
 
 
 if __name__ == '__main__':

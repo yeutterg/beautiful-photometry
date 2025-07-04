@@ -2,7 +2,7 @@
 Tools for importing and processing Spectral Power Distributions
 """
 import csv
-from colour import SpectralPowerDistribution, SpectralShape
+from colour import SpectralDistribution, SpectralShape
 from .photometer import uprtek_import_spectrum
 from os import listdir
 from os.path import isfile, join
@@ -69,10 +69,10 @@ Creates a named SPD usable by the Colour library
 @param dict spd_dict                The SPD as a dictionary
 @param string spd_name:             The name of the SPD
 
-@return SpectralPowerDistribution   The SPD as an object usable by the Colour library
+@return SpectralDistribution   The SPD as an object usable by the Colour library
 """
 def create_colour_spd(spd_dict, spd_name):
-    return SpectralPowerDistribution(spd_dict, name=spd_name)
+    return SpectralDistribution(spd_dict, name=spd_name)
 
 
 """
@@ -105,7 +105,7 @@ def import_reference_spectra(filename='source_illuminants.csv'):
                     spd_dict[int(wavelengths[i])] = float(val)
             spd_dict = normalize_spd(spd_dict)
 
-            # create the SpectralPowerDistribution
+            # create the SpectralDistribution
             colour_spd = create_colour_spd(spd_dict, description)
             colour_spd = reshape(colour_spd)
 
@@ -140,12 +140,12 @@ def get_reference_spectrum(name):
 """
 Reshapes the SPD by extending it to [360,780] and increasing the resolution to 1 nm
 
-@param SpectralPowerDistribution spd    The SPD to reshape
+@param SpectralDistribution spd    The SPD to reshape
 @param int min [optional]               The minimum wavelength to extend to
 @param int max [optional]               The maximum wavelength to extend to
 @param int interval [optional]          The nm interval to specify
 
-@return SpectralPowerDistribution       The reshaped SPD
+@return SpectralDistribution       The reshaped SPD
 """
 def reshape(spd, min=360, max=780, interval=1):
     spd = spd.extrapolate(SpectralShape(start=min, end=max))
@@ -171,7 +171,7 @@ photometer : String or None
     
 Returns
 -------
-SpectralPowerDistribution
+SpectralDistribution
     The SPD as an object usable by the Colour library
 """
 def import_spd(filename, spd_name=None, weight=1.0, normalize=False, photometer=None):
@@ -213,7 +213,7 @@ printNames : bool
 Returns
 -------
 dict
-    A dict of SpectralPowerDistribution data
+    A dict of SpectralDistribution data
 """
 def import_spd_batch(directory: str, photometer=None, printNames=True):
     spds = {}

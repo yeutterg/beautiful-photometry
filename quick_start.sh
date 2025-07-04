@@ -44,7 +44,18 @@ install_python_deps() {
 # Function to start web interface with Python
 start_web_python() {
     echo "Starting web interface with Python..."
-    python3 -m beautiful_photometry web
+    echo "The web interface will be available at http://localhost:8765"
+    echo "You can specify a different port with: --port PORT"
+    echo "You can specify a different host with: --host HOST"
+    echo "You can disable debug mode with: --no-debug"
+    echo ""
+    echo "Examples:"
+    echo "  Default: python3 -m src.beautiful_photometry web"
+    echo "  Custom port: python3 -m src.beautiful_photometry web --port 9000"
+    echo "  Local only: python3 -m src.beautiful_photometry web --host 127.0.0.1"
+    echo "  Production: python3 -m src.beautiful_photometry web --port 9000 --no-debug"
+    echo ""
+    python3 -m src.beautiful_photometry web
 }
 
 # Function to start web interface with Docker
@@ -56,7 +67,7 @@ start_web_docker() {
 # Function to run CLI with Python
 run_cli_python() {
     echo "Running CLI with Python..."
-    python3 -m beautiful_photometry cli "$@"
+    python3 -m src.beautiful_photometry cli "$@"
 }
 
 # Function to run CLI with Docker
@@ -116,6 +127,7 @@ case "${1:-web}" in
         echo "  $0 web                 # Start web interface"
         echo "  $0 cli --help          # Show CLI help"
         echo "  $0 cli single CSVs/incandescent.csv --normalize"
+        echo "  $0 web --port 9000                    # Start on custom port"
         echo "  $0 install             # Install dependencies"
         echo "  $0 test                # Run tests"
         ;;

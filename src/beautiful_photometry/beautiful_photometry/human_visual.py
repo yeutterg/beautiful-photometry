@@ -5,7 +5,7 @@ import numpy as np
 
 from .spectrum import get_reference_spectrum
 from .utils import round_output
-from colour import SpectralPowerDistribution
+from colour import SpectralDistribution
 
 """
 Gets the scotopic sensitivity curve

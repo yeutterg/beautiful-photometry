@@ -2,7 +2,7 @@
 Tools for importing and processing Spectral Power Distributions
 """
 import csv
-from colour import SpectralPowerDistribution, SpectralShape
+from colour import SpectralDistribution, SpectralShape
 from .photometer import uprtek_import_spectrum
 from os import listdir
 from os.path import isfile, join

@@ -8,7 +8,7 @@ import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
 import numpy as np
-from colour import SpectralDistribution, SpectralShape
+from colour import SpectralPowerDistribution, SpectralShape
 import tempfile
 import zipfile
 

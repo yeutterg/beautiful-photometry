@@ -4,7 +4,7 @@ SPD Plotting Tools
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors
-from colour import SpectralPowerDistribution, SpectralShape
+from colour import SpectralDistribution, SpectralShape
 from .human_circadian import get_melanopic_curve
 
 # for testing:
@@ -83,7 +83,7 @@ Plots a melanopic curve and/or melanopic stimulus for a given SPD
 @param axis ax                                      The axis on which to plot
 @param bool melanopic_curve                         Display the melanopic sensitivity curve
 @param bool melanopic_stimulus [optional]           Display the melanopic stimulus (sensitivity curve * SPD)
-@param SpectralPowerDistribution spd [optional]     The SPD (needed if melanopic_stimulus=True)
+@param SpectralDistribution spd [optional]     The SPD (needed if melanopic_stimulus=True)
 """
 def plot_melanopic_curve(ax, melanopic_curve, melanopic_stimulus=False, spd=None):
     if melanopic_curve or melanopic_stimulus:
@@ -107,7 +107,7 @@ def plot_melanopic_curve(ax, melanopic_curve, melanopic_stimulus=False, spd=None
 """
 Plots a single SPD color spectrum
 
-@param SpectralPowerDistribution spd        The SPD
+@param SpectralDistribution spd        The SPD
 @param tuple figsize [optional]             The (width,height) of the plotted figure
 @param string filename [optional]           If specified, will save plot as the specified filename
 @param string ylabel [optional]             If specified, this will replace 'Intensity' on the y axis

@@ -34,7 +34,7 @@ pip install -r requirements.txt
 python app.py
 ```
 
-The web interface will be available at `http://localhost:5000`
+The web interface will be available at `http://localhost:8765`
 
 ### Using the Web Interface
 
