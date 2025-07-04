@@ -44,11 +44,37 @@ class BeautifulPhotometry {
             }
         });
 
+        // Input method radio buttons
+        document.querySelectorAll('input[name="inputMethod"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                this.toggleInputMethod(e.target.value);
+            });
+        });
+
+        // CSV file selection change
+        document.getElementById('csvFileSelect').addEventListener('change', (e) => {
+            const selectedFile = e.target.value;
+            if (selectedFile) {
+                // Auto-fill SPD name from filename
+                const name = selectedFile.split('/').pop().split('.')[0];
+                document.getElementById('spdName').value = name;
+            }
+        });
+
         // Tab switching
         document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
             tab.addEventListener('shown.bs.tab', (e) => {
                 this.hideResults();
+                // Load CSV files when CSV tab is shown or when switching to single tab
+                if (e.target.id === 'csv-files-tab' || e.target.id === 'single-tab') {
+                    this.loadCsvFiles();
+                }
             });
+        });
+
+        // Refresh CSV files button
+        document.getElementById('refreshCsvFiles').addEventListener('click', () => {
+            this.loadCsvFiles();
         });
     }
 
@@ -98,15 +124,27 @@ class BeautifulPhotometry {
     }
 
     async handleSingleSPD() {
+        const inputMethod = document.querySelector('input[name="inputMethod"]:checked').value;
         const formData = new FormData();
-        const fileInput = document.getElementById('fileInput');
         
-        if (!fileInput.files[0]) {
-            this.showError('Please select a file to upload.');
-            return;
+        if (inputMethod === 'upload') {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files[0]) {
+                this.showError('Please select a file to upload.');
+                return;
+            }
+            formData.append('file', fileInput.files[0]);
+        } else if (inputMethod === 'csv') {
+            const csvFileSelect = document.getElementById('csvFileSelect');
+            const selectedFile = csvFileSelect.value;
+            if (!selectedFile) {
+                this.showError('Please select a CSV file.');
+                return;
+            }
+            formData.append('csv_file', selectedFile);
         }
 
-        formData.append('file', fileInput.files[0]);
+        formData.append('input_method', inputMethod);
         formData.append('spd_name', document.getElementById('spdName').value);
         formData.append('weight', document.getElementById('weight').value);
         formData.append('normalize', document.getElementById('normalize').checked);
@@ -118,10 +156,21 @@ class BeautifulPhotometry {
         this.showLoading();
         
         try {
+            // Add timeout to prevent hanging
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+            
             const response = await fetch('/upload', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
 
             const result = await response.json();
             
@@ -140,9 +189,32 @@ class BeautifulPhotometry {
                 this.showError(result.error || 'An error occurred while processing the file.');
             }
         } catch (error) {
-            this.showError('Network error: ' + error.message);
+            console.error('Single SPD error:', error);
+            if (error.name === 'AbortError') {
+                this.showError('Request timed out. Please try again with a smaller file or check your connection.');
+            } else {
+                this.showError('Network error: ' + error.message);
+            }
         } finally {
             this.hideLoading();
+        }
+    }
+
+    toggleInputMethod(method) {
+        const uploadSection = document.getElementById('uploadSection');
+        const csvSection = document.getElementById('csvSection');
+        const fileInput = document.getElementById('fileInput');
+        
+        if (method === 'upload') {
+            uploadSection.style.display = 'block';
+            csvSection.style.display = 'none';
+            fileInput.required = true;
+        } else if (method === 'csv') {
+            uploadSection.style.display = 'none';
+            csvSection.style.display = 'block';
+            fileInput.required = false;
+            // Load CSV files if not already loaded
+            this.loadCsvFilesForSelect();
         }
     }
 
@@ -315,9 +387,31 @@ class BeautifulPhotometry {
     }
 
     hideLoading() {
-        const modal = bootstrap.Modal.getInstance(document.getElementById('loadingModal'));
-        if (modal) {
-            modal.hide();
+        try {
+            const modalElement = document.getElementById('loadingModal');
+            if (modalElement) {
+                const modal = bootstrap.Modal.getInstance(modalElement);
+                if (modal) {
+                    modal.hide();
+                } else {
+                    // If no instance exists, create one and hide it
+                    const newModal = new bootstrap.Modal(modalElement);
+                    newModal.hide();
+                }
+            }
+        } catch (error) {
+            console.error('Error hiding loading modal:', error);
+            // Fallback: manually hide the modal
+            const modalElement = document.getElementById('loadingModal');
+            if (modalElement) {
+                modalElement.style.display = 'none';
+                modalElement.classList.remove('show');
+                document.body.classList.remove('modal-open');
+                const backdrop = document.querySelector('.modal-backdrop');
+                if (backdrop) {
+                    backdrop.remove();
+                }
+            }
         }
     }
 
@@ -360,9 +454,221 @@ class BeautifulPhotometry {
             }
         }, 3000);
     }
+
+    async loadCsvFiles() {
+        const container = document.getElementById('csvFilesContainer');
+        container.innerHTML = '<div class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> Loading CSV files...</div>';
+        
+        try {
+            const response = await fetch('/api/csv-files');
+            const result = await response.json();
+            
+            if (result.files && result.files.length > 0) {
+                this.displayCsvFiles(result.files);
+                // Also populate the single SPD CSV selector
+                this.populateCsvSelector(result.files);
+            } else {
+                container.innerHTML = '<div class="text-center text-muted">No CSV files found in the CSVs directory.</div>';
+                this.populateCsvSelector([]);
+            }
+        } catch (error) {
+            container.innerHTML = '<div class="text-center text-danger">Error loading CSV files: ' + error.message + '</div>';
+            this.populateCsvSelector([]);
+        }
+    }
+
+    loadCsvFilesForSelect() {
+        // Load CSV files specifically for the single SPD selector
+        fetch('/api/csv-files')
+            .then(response => response.json())
+            .then(result => {
+                if (result.files && result.files.length > 0) {
+                    this.populateCsvSelector(result.files);
+                } else {
+                    this.populateCsvSelector([]);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading CSV files for selector:', error);
+                this.populateCsvSelector([]);
+            });
+    }
+
+    populateCsvSelector(files) {
+        const selector = document.getElementById('csvFileSelect');
+        selector.innerHTML = '<option value="">Select a CSV file...</option>';
+        
+        if (files.length === 0) {
+            selector.innerHTML = '<option value="">No CSV files available</option>';
+            return;
+        }
+        
+        // Group files by category
+        const categories = {};
+        files.forEach(file => {
+            if (!categories[file.category]) {
+                categories[file.category] = [];
+            }
+            categories[file.category].push(file);
+        });
+        
+        // Add options grouped by category
+        Object.keys(categories).sort().forEach(category => {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = category;
+            
+            categories[category].forEach(file => {
+                const option = document.createElement('option');
+                option.value = file.path;
+                option.textContent = file.name;
+                optgroup.appendChild(option);
+            });
+            
+            selector.appendChild(optgroup);
+        });
+    }
+
+    displayCsvFiles(files) {
+        const container = document.getElementById('csvFilesContainer');
+        
+        // Group files by category
+        const categories = {};
+        files.forEach(file => {
+            if (!categories[file.category]) {
+                categories[file.category] = [];
+            }
+            categories[file.category].push(file);
+        });
+        
+        let html = '';
+        
+        Object.keys(categories).sort().forEach(category => {
+            html += `<div class="mb-4">`;
+            html += `<h6 class="text-muted mb-2"><i class="fas fa-folder me-1"></i>${category}</h6>`;
+            
+            categories[category].forEach(file => {
+                const fileSize = this.formatFileSize(file.size);
+                html += `
+                    <div class="card mb-2">
+                        <div class="card-body p-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>${file.name}</strong>
+                                    <small class="text-muted d-block">${file.path}</small>
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-muted">${fileSize}</small>
+                                    <div class="btn-group btn-group-sm mt-1">
+                                        <button class="btn btn-outline-primary btn-sm" onclick="app.viewCsvFile('${file.path}')">
+                                            <i class="fas fa-eye"></i> View
+                                        </button>
+                                        <button class="btn btn-outline-success btn-sm" onclick="app.useCsvFile('${file.path}')">
+                                            <i class="fas fa-plus"></i> Use
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `</div>`;
+        });
+        
+        container.innerHTML = html;
+    }
+
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    async viewCsvFile(filePath) {
+        try {
+            const response = await fetch(`/api/csv-files/${encodeURIComponent(filePath)}`);
+            const result = await response.json();
+            
+            if (result.content) {
+                // Create a modal to display the file content
+                const modal = document.createElement('div');
+                modal.className = 'modal fade';
+                modal.innerHTML = `
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">${result.name}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <pre class="bg-light p-3" style="max-height: 400px; overflow-y: auto;">${this.escapeHtml(result.content)}</pre>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-primary" onclick="app.useCsvFile('${filePath}')">Use This File</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+                const modalInstance = new bootstrap.Modal(modal);
+                modalInstance.show();
+                
+                // Clean up modal after it's hidden
+                modal.addEventListener('hidden.bs.modal', () => {
+                    modal.remove();
+                });
+            } else {
+                this.showError('Could not load file content.');
+            }
+        } catch (error) {
+            this.showError('Error loading file: ' + error.message);
+        }
+    }
+
+    async useCsvFile(filePath) {
+        try {
+            const response = await fetch(`/api/csv-files/${encodeURIComponent(filePath)}`);
+            const result = await response.json();
+            
+            if (result.content) {
+                // Switch to the compare tab and add the CSV data
+                const compareTab = document.getElementById('compare-tab');
+                const tab = new bootstrap.Tab(compareTab);
+                tab.show();
+                
+                // Add a new spectrum input with the CSV data
+                this.addSpectrumInput();
+                const lastInput = document.querySelector('.spectrum-input:last-child');
+                
+                // Fill in the data
+                const nameInput = lastInput.querySelector('input[type="text"]');
+                const csvTextarea = lastInput.querySelector('textarea');
+                
+                nameInput.value = result.name.split('.')[0]; // Remove extension
+                csvTextarea.value = result.content;
+                
+                this.showSuccess(`Added ${result.name} to comparison.`);
+            } else {
+                this.showError('Could not load file content.');
+            }
+        } catch (error) {
+                this.showError('Error loading file: ' + error.message);
+        }
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
 }
 
 // Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new BeautifulPhotometry();
+    window.app = new BeautifulPhotometry();
 }); 

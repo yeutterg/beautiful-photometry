@@ -74,33 +74,44 @@ def register_routes(app: Flask) -> None:
     def upload_file():
         """Handle single SPD file upload and processing."""
         try:
-            if 'file' not in request.files:
-                return jsonify({'error': 'No file provided'}), 400
+            input_method = request.form.get('input_method', 'upload')
             
-            file = request.files['file']
-            if file.filename == '':
-                return jsonify({'error': 'No file selected'}), 400
-            
-            if not allowed_file(file.filename, app.config['ALLOWED_EXTENSIONS']):
-                return jsonify({'error': 'Invalid file type. Please upload CSV, XLS, or TXT files.'}), 400
-            
-            # Get parameters from form
-            spd_name = request.form.get('spd_name', '')
-            weight = float(request.form.get('weight', 1.0))
-            normalize = request.form.get('normalize', 'false').lower() == 'true'
-            photometer = request.form.get('photometer', None)
-            if photometer == 'none':
-                photometer = None
-            
-            # Process the file
-            spd = process_uploaded_file(
-                file, 
-                spd_name, 
-                weight, 
-                normalize, 
-                photometer,
-                app.config['UPLOAD_FOLDER']
-            )
+            if input_method == 'upload':
+                if 'file' not in request.files:
+                    return jsonify({'error': 'No file provided'}), 400
+                
+                file = request.files['file']
+                if file.filename == '':
+                    return jsonify({'error': 'No file selected'}), 400
+                
+                if not allowed_file(file.filename, app.config['ALLOWED_EXTENSIONS']):
+                    return jsonify({'error': 'Invalid file type. Please upload CSV, XLS, or TXT files.'}), 400
+                
+                # Process uploaded file
+                spd = process_uploaded_file(
+                    file, 
+                    request.form.get('spd_name', ''),
+                    float(request.form.get('weight', 1.0)),
+                    request.form.get('normalize', 'false').lower() == 'true',
+                    request.form.get('photometer', None),
+                    app.config['UPLOAD_FOLDER']
+                )
+                
+            elif input_method == 'csv':
+                csv_file_path = request.form.get('csv_file', '')
+                if not csv_file_path:
+                    return jsonify({'error': 'No CSV file selected'}), 400
+                
+                # Process selected CSV file
+                spd = process_csv_file(
+                    csv_file_path,
+                    request.form.get('spd_name', ''),
+                    float(request.form.get('weight', 1.0)),
+                    request.form.get('normalize', 'false').lower() == 'true',
+                    request.form.get('photometer', None)
+                )
+            else:
+                return jsonify({'error': 'Invalid input method'}), 400
             
             # Calculate metrics
             metrics = calculate_spd_metrics(spd)
@@ -240,6 +251,61 @@ def register_routes(app: Flask) -> None:
             current_app.logger.error(f"Reference spectra error: {str(e)}")
             return jsonify({'error': str(e)}), 500
 
+    @app.route('/api/csv-files')
+    def get_csv_files():
+        """Get list of available CSV files in the CSVs directory."""
+        try:
+            csv_dir = Path('CSVs')
+            if not csv_dir.exists():
+                return jsonify({'files': []})
+            
+            files = []
+            for file_path in csv_dir.rglob('*'):
+                if file_path.is_file() and file_path.suffix.lower() in ['.csv', '.xls', '.txt']:
+                    # Get relative path from CSVs directory
+                    rel_path = file_path.relative_to(csv_dir)
+                    files.append({
+                        'name': file_path.name,
+                        'path': str(rel_path),
+                        'full_path': str(file_path),
+                        'size': file_path.stat().st_size,
+                        'category': str(rel_path.parent) if rel_path.parent != Path('.') else 'Root'
+                    })
+            
+            # Sort by category, then by name
+            files.sort(key=lambda x: (x['category'], x['name']))
+            
+            return jsonify({'files': files})
+        except Exception as e:
+            current_app.logger.error(f"CSV files error: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/csv-files/<path:file_path>')
+    def get_csv_file(file_path):
+        """Get the contents of a specific CSV file."""
+        try:
+            csv_file = Path('CSVs') / file_path
+            
+            # Security check: ensure the file is within the CSVs directory
+            if not csv_file.resolve().is_relative_to(Path('CSVs').resolve()):
+                return jsonify({'error': 'Access denied'}), 403
+            
+            if not csv_file.exists():
+                return jsonify({'error': 'File not found'}), 404
+            
+            # Read file contents
+            with open(csv_file, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+            
+            return jsonify({
+                'name': csv_file.name,
+                'path': file_path,
+                'content': content
+            })
+        except Exception as e:
+            current_app.logger.error(f"CSV file read error: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+
 
 def allowed_file(filename: str, allowed_extensions: set) -> bool:
     """Check if a filename has an allowed extension."""
@@ -270,6 +336,31 @@ def process_uploaded_file(
         # Clean up temporary file
         if temp_path.exists():
             temp_path.unlink()
+
+
+def process_csv_file(
+    csv_file_path: str,
+    spd_name: Optional[str] = None,
+    weight: float = 1.0,
+    normalize: bool = False,
+    photometer: Optional[str] = None
+) -> SpectralDistribution:
+    """Process a CSV file from the CSVs directory and return an SPD object."""
+    csv_file = Path('CSVs') / csv_file_path
+    
+    # Security check: ensure the file is within the CSVs directory
+    if not csv_file.resolve().is_relative_to(Path('CSVs').resolve()):
+        raise ValueError('Access denied: File must be within CSVs directory')
+    
+    if not csv_file.exists():
+        raise FileNotFoundError(f'CSV file not found: {csv_file_path}')
+    
+    if not spd_name:
+        spd_name = csv_file.stem
+    
+    # Import the SPD
+    spd = import_spd(str(csv_file), spd_name, weight, normalize, photometer)
+    return spd
 
 
 def calculate_spd_metrics(spd: SpectralDistribution) -> Dict[str, Any]:

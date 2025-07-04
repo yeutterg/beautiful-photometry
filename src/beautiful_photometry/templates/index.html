@@ -42,6 +42,11 @@
                                     <i class="fas fa-chart-bar me-1"></i>Compare
                                 </button>
                             </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="csv-files-tab" data-bs-toggle="tab" data-bs-target="#csv-files" type="button" role="tab">
+                                    <i class="fas fa-folder-open me-1"></i>CSV Files
+                                </button>
+                            </li>
                         </ul>
 
                         <!-- Tab Content -->
@@ -49,10 +54,39 @@
                             <!-- Single SPD Tab -->
                             <div class="tab-pane fade show active" id="single" role="tabpanel">
                                 <form id="singleForm">
+                                    <!-- Input Method Selection -->
                                     <div class="mb-3">
-                                        <label for="fileInput" class="form-label">Upload SPD File</label>
-                                        <input type="file" class="form-control" id="fileInput" accept=".csv,.xls,.txt" required>
-                                        <div class="form-text">Supported formats: CSV, XLS, TXT</div>
+                                        <label class="form-label">Input Method</label>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="inputMethod" id="uploadMethod" value="upload" checked>
+                                            <label class="btn btn-outline-primary" for="uploadMethod">
+                                                <i class="fas fa-upload me-1"></i>Upload File
+                                            </label>
+                                            <input type="radio" class="btn-check" name="inputMethod" id="csvMethod" value="csv">
+                                            <label class="btn btn-outline-primary" for="csvMethod">
+                                                <i class="fas fa-folder-open me-1"></i>Select CSV
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <!-- File Upload Section -->
+                                    <div id="uploadSection">
+                                        <div class="mb-3">
+                                            <label for="fileInput" class="form-label">Upload SPD File</label>
+                                            <input type="file" class="form-control" id="fileInput" accept=".csv,.xls,.txt">
+                                            <div class="form-text">Supported formats: CSV, XLS, TXT</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- CSV Selection Section -->
+                                    <div id="csvSection" style="display: none;">
+                                        <div class="mb-3">
+                                            <label for="csvFileSelect" class="form-label">Select CSV File</label>
+                                            <select class="form-select" id="csvFileSelect">
+                                                <option value="">Loading CSV files...</option>
+                                            </select>
+                                            <div class="form-text">Choose from available CSV files in the CSVs directory</div>
+                                        </div>
                                     </div>
 
                                     <div class="mb-3">
@@ -180,6 +214,21 @@
                                         <i class="fas fa-chart-bar me-2"></i>Compare Spectra
                                     </button>
                                 </form>
+                            </div>
+
+                            <!-- CSV Files Tab -->
+                            <div class="tab-pane fade" id="csv-files" role="tabpanel">
+                                <div class="mb-3">
+                                    <button type="button" class="btn btn-outline-primary btn-sm" id="refreshCsvFiles">
+                                        <i class="fas fa-sync-alt me-1"></i>Refresh Files
+                                    </button>
+                                </div>
+                                
+                                <div id="csvFilesContainer">
+                                    <div class="text-center text-muted">
+                                        <i class="fas fa-spinner fa-spin"></i> Loading CSV files...
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
