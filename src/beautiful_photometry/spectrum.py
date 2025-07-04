@@ -101,7 +101,7 @@ def import_reference_spectra(filename='source_illuminants.csv'):
             # create the SPD dict
             spd_dict = {} 
             for i, val in enumerate(spd):
-                if val is not '':
+                if val != '':
                     spd_dict[int(wavelengths[i])] = float(val)
             spd_dict = normalize_spd(spd_dict)
 
@@ -186,7 +186,7 @@ def import_spd(filename, spd_name=None, weight=1.0, normalize=False, photometer=
     if normalize:
         spd_dict = normalize_spd(spd_dict)
 
-    if weight is not 1.0:
+    if weight != 1.0:
         spd_dict = weight_spd(spd_dict, weight)
 
     spd = create_colour_spd(spd_dict, spd_name)

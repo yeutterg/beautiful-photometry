@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  beautiful-photometry:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./CSVs:/app/CSVs:ro
+      - ./uploads:/app/uploads
+      - ./out:/app/out
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    restart: unless-stopped
+    command: web
+
+  # Alternative service for CLI usage
+  beautiful-photometry-cli:
+    build: .
+    volumes:
+      - ./CSVs:/app/CSVs:ro
+      - ./out:/app/out
+    environment:
+      - PYTHONPATH=/app
+    profiles:
+      - cli
+    command: cli 
