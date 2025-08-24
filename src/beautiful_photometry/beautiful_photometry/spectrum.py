@@ -72,7 +72,7 @@ Creates a named SPD usable by the Colour library
 @return SpectralPowerDistribution   The SPD as an object usable by the Colour library
 """
 def create_colour_spd(spd_dict, spd_name):
-    return SpectralPowerDistribution(spd_dict, name=spd_name)
+    return SpectralDistribution(spd_dict, name=spd_name)
 
 
 """

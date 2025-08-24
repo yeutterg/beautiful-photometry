@@ -255,13 +255,20 @@ class BeautifulPhotometry {
         this.showLoading();
         
         try {
+            // Add timeout to prevent hanging
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+            
             const response = await fetch('/compare', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(requestData)
+                body: JSON.stringify(requestData),
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
 
             const result = await response.json();
             
@@ -276,7 +283,12 @@ class BeautifulPhotometry {
                 this.showError(result.error || 'An error occurred while comparing spectra.');
             }
         } catch (error) {
-            this.showError('Network error: ' + error.message);
+            console.error('Compare spectra error:', error);
+            if (error.name === 'AbortError') {
+                this.showError('Request timed out. Please try again with smaller data or check your connection.');
+            } else {
+                this.showError('Network error: ' + error.message);
+            }
         } finally {
             this.hideLoading();
         }

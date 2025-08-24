@@ -25,13 +25,15 @@ dict
 """
 def import_spectral_csv(filename):
     spd = {}
-    
     with open(filename, mode='r', encoding='utf-8-sig') as csvFile:
         reader = csv.reader(csvFile, delimiter=',')
-
         for count, row in enumerate(reader):
-            spd[int(row[0])] = float(row[1])
-
+            if not row or len(row) < 2:
+                continue  # skip empty or malformed lines
+            try:
+                spd[int(row[0])] = float(row[1])
+            except Exception:
+                continue  # skip lines that can't be parsed
     return spd
 
 
@@ -148,8 +150,8 @@ Reshapes the SPD by extending it to [360,780] and increasing the resolution to 1
 @return SpectralDistribution       The reshaped SPD
 """
 def reshape(spd, min=360, max=780, interval=1):
-    spd = spd.extrapolate(SpectralShape(start=min, end=max))
-    spd = spd.interpolate(SpectralShape(interval=interval))
+    spd = spd.extrapolate(SpectralShape(start=min, end=max, interval=interval))
+    spd = spd.interpolate(SpectralShape(start=min, end=max, interval=interval))
     return spd
 
 

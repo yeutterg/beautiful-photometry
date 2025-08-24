@@ -95,7 +95,7 @@ Calculates melanopic lumens for a given light source
 @return int/float                               The melanopic lumens result
 """
 def melanopic_lumens(input, lumens, toround=True):
-    if type(input) == SpectralPowerDistribution:
+    if type(input) == SpectralDistribution:
         # SPD given, calculate the melanopic ratio
         mel_ratio = melanopic_ratio(input, toround=False)
     else:

@@ -8,16 +8,16 @@ import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
 import numpy as np
-from colour import SpectralPowerDistribution, SpectralShape
+from colour import SpectralDistribution, SpectralShape
 import tempfile
 import zipfile
 
 # Import the existing photometry modules
-from src.spectrum import import_spd, normalize_spd, create_colour_spd, reshape
-from src.plot import plot_spectrum, plot_multi_spectrum, generate_color_spectrum
-from src.human_circadian import melanopic_ratio, melanopic_response, melanopic_lumens, melanopic_photopic_ratio
-from src.human_visual import scotopic_photopic_ratio
-from src.photometer import uprtek_import_spectrum
+from src.beautiful_photometry.beautiful_photometry.spectrum import import_spd, normalize_spd, create_colour_spd, reshape
+from src.beautiful_photometry.beautiful_photometry.plot import plot_spectrum, plot_multi_spectrum, generate_color_spectrum
+from src.beautiful_photometry.beautiful_photometry.human_circadian import melanopic_ratio, melanopic_response, melanopic_lumens, melanopic_photopic_ratio
+from src.beautiful_photometry.beautiful_photometry.human_visual import scotopic_photopic_ratio
+from src.beautiful_photometry.beautiful_photometry.photometer import uprtek_import_spectrum
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
@@ -262,4 +262,4 @@ def get_reference_spectra():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000) 
+    app.run(debug=True, host='0.0.0.0', port=8080) 
