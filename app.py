@@ -249,7 +249,7 @@ def export_plot():
 def get_reference_spectra():
     """Get list of available reference spectra"""
     try:
-        from src.spectrum import import_reference_spectra, reference_spectra
+        from src.beautiful_photometry.beautiful_photometry.spectrum import import_reference_spectra, reference_spectra
         
         if not reference_spectra:
             import_reference_spectra()
