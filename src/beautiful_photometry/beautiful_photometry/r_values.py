@@ -96,8 +96,9 @@ def plot_r_values(r_values:dict, figsize=(8,4), showvals=True, title=None, filen
     # set axis style
     ax.spines['top'].set_color('none')
     ax.spines['right'].set_color('none')
-    ax.spines['left'].set_smart_bounds(True)
-    ax.spines['bottom'].set_smart_bounds(True)
+    # set_smart_bounds deprecated in newer matplotlib versions
+    # ax.spines['left'].set_smart_bounds(True)
+    # ax.spines['bottom'].set_smart_bounds(True)
 
     # save the figure if a filename was specified
     if filename:

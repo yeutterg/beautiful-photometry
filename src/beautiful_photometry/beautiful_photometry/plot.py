@@ -166,8 +166,9 @@ def plot_spectrum(
     # change the style of the axis spines
     ax.spines['top'].set_color('none')
     ax.spines['right'].set_color('none')
-    ax.spines['left'].set_smart_bounds(True)
-    ax.spines['bottom'].set_smart_bounds(True)
+    # set_smart_bounds deprecated in newer matplotlib versions
+    # ax.spines['left'].set_smart_bounds(True)
+    # ax.spines['bottom'].set_smart_bounds(True)
 
     # show title
     if title:
@@ -230,7 +231,8 @@ def plot_multi_spectrum(
         ax1.spines['left'].set_color('none')
         ax1.spines['top'].set_color('none')
         ax1.spines['right'].set_color('none')
-        ax1.spines['bottom'].set_smart_bounds(True)
+        # set_smart_bounds deprecated in newer matplotlib versions
+        # ax1.spines['bottom'].set_smart_bounds(True)
         ax1.yaxis.set_visible(False)
         ax1.tick_params(top=False, left=False, right=False, bottom=True)
         ax1.set_ylim(-0.5,1)
@@ -252,7 +254,7 @@ def plot_multi_spectrum(
             arr_end = np.argwhere(spd_wls == xlim[1])[0][0]
             values = values[arr_start:arr_end+1]
 
-        legend_vals.append(spd.strict_name)
+        legend_vals.append(spd.name)
         ax0.plot(wavelengths, values)
 
     # show the legend
@@ -283,7 +285,8 @@ def plot_multi_spectrum(
     # change the style of the axis spines
     ax0.spines['top'].set_color('none')
     ax0.spines['right'].set_color('none')
-    ax0.spines['left'].set_smart_bounds(True)
+    # set_smart_bounds deprecated in newer matplotlib versions
+    # ax0.spines['left'].set_smart_bounds(True)
     ax0.spines['bottom'].set_color('none')
     
     # save the figure if a filename was specified

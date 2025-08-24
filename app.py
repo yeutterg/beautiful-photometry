@@ -98,7 +98,7 @@ def upload_file():
         
         # Calculate metrics
         metrics = {
-            'name': spd.strict_name,
+            'name': spd.name,
             'melanopic_ratio': round(melanopic_ratio(spd), 3),
             'melanopic_response': round(melanopic_response(spd), 1),
             'scotopic_photopic_ratio': round(scotopic_photopic_ratio(spd), 3),
@@ -110,7 +110,7 @@ def upload_file():
             'spd': spd,
             'figsize': (10, 6),
             'suppress': True,
-            'title': spd.strict_name,
+            'title': spd.name,
             'melanopic_curve': request.form.get('melanopic_curve', 'false').lower() == 'true',
             'melanopic_stimulus': request.form.get('melanopic_stimulus', 'false').lower() == 'true',
             'hideyaxis': request.form.get('hideyaxis', 'false').lower() == 'true'
@@ -190,7 +190,7 @@ def compare_spectra():
         metrics = []
         for spd in spds:
             metrics.append({
-                'name': spd.strict_name,
+                'name': spd.name,
                 'melanopic_ratio': round(melanopic_ratio(spd), 3),
                 'melanopic_response': round(melanopic_response(spd), 1),
                 'scotopic_photopic_ratio': round(scotopic_photopic_ratio(spd), 3),

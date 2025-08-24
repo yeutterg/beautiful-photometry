@@ -148,8 +148,8 @@ Reshapes the SPD by extending it to [360,780] and increasing the resolution to 1
 @return SpectralPowerDistribution       The reshaped SPD
 """
 def reshape(spd, min=360, max=780, interval=1):
-    spd = spd.extrapolate(SpectralShape(start=min, end=max))
-    spd = spd.interpolate(SpectralShape(interval=interval))
+    spd = spd.extrapolate(SpectralShape(start=min, end=max, interval=interval))
+    spd = spd.interpolate(SpectralShape(start=min, end=max, interval=interval))
     return spd
 
 
@@ -221,7 +221,7 @@ def import_spd_batch(directory: str, photometer=None, printNames=True):
 
     for file in files:
         spd = import_spd(directory + file, normalize=True, photometer=photometer)
-        spds[spd.strict_name] = spd
+        spds[spd.name] = spd
 
     if printNames:
         print('Imported the following SPDs:')
