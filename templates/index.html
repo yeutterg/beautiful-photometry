@@ -142,7 +142,8 @@
                     </div>
 
                     <div class="row mt-3">
-                        <div class="col-md-3">
+                        <div class="col-md-4">
+                            <h6>Analysis Options</h6>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="normalize">
                                 <label class="form-check-label" for="normalize">
@@ -150,17 +151,9 @@
                                 </label>
                             </div>
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="melanopicCurve">
-                                <label class="form-check-label" for="melanopicCurve">
-                                    Show Melanopic Curve
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="melanopicStimulus">
-                                <label class="form-check-label" for="melanopicStimulus">
-                                    Show Melanopic Stimulus
+                                <input class="form-check-input" type="checkbox" id="melanopicResponse">
+                                <label class="form-check-label" for="melanopicResponse">
+                                    Show Melanopic Response
                                 </label>
                             </div>
                             <div class="form-check">
@@ -169,29 +162,54 @@
                                     Hide Y-Axis
                                 </label>
                             </div>
-                        </div>
-                        <div class="col-md-3">
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="hideXAxis">
-                                <label class="form-check-label" for="hideXAxis">
-                                    Hide X-Axis
+                                <input class="form-check-input" type="checkbox" id="showTitle" checked>
+                                <label class="form-check-label" for="showTitle">
+                                    Show Title
                                 </label>
                             </div>
-                            <div class="form-check">
+                            <div class="form-check mb-3">
                                 <input class="form-check-input" type="checkbox" id="showLegend" checked>
                                 <label class="form-check-label" for="showLegend">
                                     Show Legend
                                 </label>
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <button class="btn btn-primary w-100" id="analyzeBtn">
+                        <div class="col-md-4">
+                            <h6>Display Settings</h6>
+                            <div class="row mb-2">
+                                <div class="col-6">
+                                    <label for="xMin" class="form-label form-label-sm">X-Min (nm)</label>
+                                    <input type="number" class="form-control form-control-sm" id="xMin" placeholder="Auto" min="300" max="2000">
+                                </div>
+                                <div class="col-6">
+                                    <label for="xMax" class="form-label form-label-sm">X-Max (nm)</label>
+                                    <input type="number" class="form-control form-control-sm" id="xMax" placeholder="Auto" min="300" max="2000">
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <label for="plotDPI" class="form-label form-label-sm">Resolution (DPI)</label>
+                                <select class="form-select form-select-sm" id="plotDPI">
+                                    <option value="100">100 DPI (Low)</option>
+                                    <option value="150">150 DPI (Medium)</option>
+                                    <option value="300" selected>300 DPI (High)</option>
+                                    <option value="600">600 DPI (Very High)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>Actions</h6>
+                            <button class="btn btn-primary w-100 mb-2" id="analyzeBtn">
                                 <i class="fas fa-chart-bar me-2"></i>
                                 Analyze
                             </button>
-                            <button class="btn btn-outline-secondary w-100 mt-2" id="exportBtn" disabled>
-                                <i class="fas fa-download me-2"></i>
-                                Export Results
+                            <button class="btn btn-outline-secondary w-100 mb-2" id="exportImageBtn" disabled>
+                                <i class="fas fa-image me-2"></i>
+                                Export Image
+                            </button>
+                            <button class="btn btn-outline-secondary w-100" id="exportDataBtn" disabled>
+                                <i class="fas fa-file-csv me-2"></i>
+                                Export Data
                             </button>
                         </div>
                     </div>

@@ -2,6 +2,7 @@
 Tools for importing and processing Spectral Power Distributions
 """
 import csv
+import numpy as np
 from colour import SpectralDistribution, SpectralShape
 from .photometer import uprtek_import_spectrum
 from os import listdir
@@ -147,9 +148,29 @@ Reshapes the SPD by extending it to [360,780] and increasing the resolution to 1
 
 @return SpectralPowerDistribution       The reshaped SPD
 """
-def reshape(spd, min=360, max=780, interval=1):
-    spd = spd.extrapolate(SpectralShape(start=min, end=max, interval=interval))
-    spd = spd.interpolate(SpectralShape(start=min, end=max, interval=interval))
+def reshape(spd, min=None, max=None, interval=1):
+    # If min/max not specified, use the data's actual range
+    wavelengths = np.array(spd.wavelengths)
+    
+    if min is None:
+        min = int(np.min(wavelengths))
+    if max is None:
+        max = int(np.max(wavelengths))
+    
+    # Ensure min is less than max
+    if min >= max:
+        min, max = max, min
+    
+    # Only reshape if we have a valid range
+    if min < max:
+        try:
+            spd = spd.extrapolate(SpectralShape(start=min, end=max, interval=interval))
+            spd = spd.interpolate(SpectralShape(start=min, end=max, interval=interval))
+        except Exception as e:
+            # If reshape fails, return original
+            print(f"Warning: Could not reshape SPD: {e}")
+            pass
+    
     return spd
 
 

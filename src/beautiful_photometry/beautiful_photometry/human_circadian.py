@@ -56,7 +56,35 @@ Calculates the melanopic response (used to compute melanopic ratio) for a given 
 """
 def melanopic_response(spd, toround=True):
     melanopic_spd = get_melanopic_curve()
-    resp = np.sum(np.multiply(melanopic_spd.values, spd.values))
+    
+    # Align wavelengths between melanopic curve and SPD
+    mel_wavelengths = np.array(melanopic_spd.wavelengths)
+    spd_wavelengths = np.array(spd.wavelengths)
+    mel_values = np.array(melanopic_spd.values)
+    spd_values = np.array(spd.values)
+    
+    # Ensure wavelengths are sorted and unique
+    mel_sorted_idx = np.argsort(mel_wavelengths)
+    mel_wavelengths = mel_wavelengths[mel_sorted_idx]
+    mel_values = mel_values[mel_sorted_idx]
+    
+    spd_sorted_idx = np.argsort(spd_wavelengths)
+    spd_wavelengths = spd_wavelengths[spd_sorted_idx]
+    spd_values = spd_values[spd_sorted_idx]
+    
+    # Find overlapping range
+    min_wavelength = max(np.min(mel_wavelengths), np.min(spd_wavelengths))
+    max_wavelength = min(np.max(mel_wavelengths), np.max(spd_wavelengths))
+    
+    # Create common wavelength array
+    common_wavelengths = np.arange(int(min_wavelength), int(max_wavelength) + 1)
+    
+    # Interpolate both to common wavelengths
+    mel_interp = np.interp(common_wavelengths, mel_wavelengths, mel_values)
+    spd_interp = np.interp(common_wavelengths, spd_wavelengths, spd_values)
+    
+    # Calculate response
+    resp = np.sum(np.multiply(mel_interp, spd_interp))
     return round_output(resp, toround, 1)
 
 

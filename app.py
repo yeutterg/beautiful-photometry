@@ -33,14 +33,14 @@ ALLOWED_EXTENSIONS = {'csv', 'xls', 'txt'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def create_plot_image(plot_func, *args, **kwargs):
+def create_plot_image(plot_func, dpi=300, *args, **kwargs):
     """Create a plot and return it as a base64 encoded image"""
     # Create the plot
     plot_func(*args, **kwargs)
     
     # Save to bytes buffer
     img_buffer = io.BytesIO()
-    plt.savefig(img_buffer, format='png', dpi=300, bbox_inches='tight')
+    plt.savefig(img_buffer, format='png', dpi=dpi, bbox_inches='tight')
     img_buffer.seek(0)
     
     # Clear the plot
@@ -118,10 +118,18 @@ def upload_file():
         
         plot_image = create_plot_image(plot_spectrum, **plot_options)
         
+        # Extract the raw SPD data for future re-analysis
+        spd_data = {}
+        wavelengths = spd.wavelengths
+        values = spd.values
+        for i, wavelength in enumerate(wavelengths):
+            spd_data[str(int(wavelength))] = float(values[i])
+        
         return jsonify({
             'success': True,
             'metrics': metrics,
-            'plot_image': plot_image
+            'plot_image': plot_image,
+            'spd_data': spd_data
         })
         
     except Exception as e:
@@ -206,42 +214,31 @@ def compare_spectra():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/export', methods=['POST'])
-def export_plot():
+@app.route('/export-image', methods=['POST'])
+def export_image():
     try:
         data = request.get_json()
-        plot_type = data.get('plot_type', 'single')
-        format_type = data.get('format', 'png')
         
-        if format_type not in ['png', 'svg', 'pdf']:
-            return jsonify({'error': 'Unsupported format'}), 400
+        # Get the base64 image from the request
+        plot_image = data.get('plot_image')
+        if not plot_image:
+            return jsonify({'error': 'No plot image provided'}), 400
         
-        # Create temporary file
-        with tempfile.NamedTemporaryFile(suffix=f'.{format_type}', delete=False) as tmp_file:
-            temp_path = tmp_file.name
+        # Decode the base64 image
+        img_data = base64.b64decode(plot_image)
         
-        try:
-            if plot_type == 'single':
-                # Recreate single plot
-                spd_data = data.get('spd_data', {})
-                # This would need to recreate the SPD object from the data
-                # For now, we'll return an error
-                return jsonify({'error': 'Export not yet implemented for single plots'}), 501
-            else:
-                # Recreate comparison plot
-                spds_data = data.get('spectra', [])
-                # This would need to recreate the SPD objects from the data
-                # For now, we'll return an error
-                return jsonify({'error': 'Export not yet implemented for comparison plots'}), 501
-            
-            # Send file
-            return send_file(temp_path, as_attachment=True, download_name=f'plot.{format_type}')
-            
-        finally:
-            # Clean up
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-                
+        # Create a BytesIO object
+        img_buffer = io.BytesIO(img_data)
+        img_buffer.seek(0)
+        
+        # Send as downloadable file
+        return send_file(
+            img_buffer,
+            mimetype='image/png',
+            as_attachment=True,
+            download_name=f'spectrum_plot_{data.get("name", "analysis")}.png'
+        )
+        
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -258,6 +255,92 @@ def get_reference_spectra():
                        for spec in reference_spectra]
         
         return jsonify({'spectra': spectra_list})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/analyze', methods=['POST'])
+def analyze_spd():
+    """Analyze an SPD with given options"""
+    try:
+        data = request.json
+        
+        # Get the SPD data (this would normally come from stored SPDs)
+        spd_data = data.get('spd_data')
+        spd_name = data.get('name', 'SPD')
+        options = data.get('options', {})
+        
+        # For now, create a simple SPD from the uploaded data
+        # In production, you'd retrieve this from storage
+        from src.beautiful_photometry.beautiful_photometry.spectrum import create_colour_spd
+        
+        # First ensure the SPD data has numeric keys and is sorted
+        sorted_spd_data = {}
+        for key, value in spd_data.items():
+            try:
+                wavelength = float(key)
+                sorted_spd_data[wavelength] = float(value)
+            except (ValueError, TypeError):
+                continue
+        
+        # Sort by wavelength
+        sorted_spd_data = dict(sorted(sorted_spd_data.items()))
+        
+        if not sorted_spd_data:
+            return jsonify({'error': 'Invalid SPD data format'}), 400
+        
+        # Apply normalization if requested (after sorting)
+        if options.get('normalize', False):
+            sorted_spd_data = normalize_spd(sorted_spd_data)
+        
+        # Create SPD object
+        spd = create_colour_spd(sorted_spd_data, spd_name)
+        
+        # Calculate metrics
+        metrics = {
+            'name': spd.name,
+            'melanopic_ratio': round(melanopic_ratio(spd), 3),
+            'melanopic_response': round(melanopic_response(spd), 1),
+            'scotopic_photopic_ratio': round(scotopic_photopic_ratio(spd), 3),
+            'melanopic_photopic_ratio': round(melanopic_photopic_ratio(spd), 3)
+        }
+        
+        # Get X-axis limits from options
+        x_min = options.get('x_min')
+        x_max = options.get('x_max')
+        
+        # If both are provided, use them; otherwise let plot_spectrum use data range
+        if x_min is not None and x_max is not None:
+            xlim = (int(x_min), int(x_max))
+        else:
+            xlim = None  # Let plot_spectrum determine from data
+        
+        # Get DPI from options
+        dpi = int(options.get('dpi', 300))
+        
+        # Combine melanopic options - if melanopic_response is true, show both curve and stimulus
+        show_melanopic = options.get('melanopic_response', False)
+        
+        # Create plot with options
+        plot_options = {
+            'spd': spd,
+            'figsize': (10, 6),
+            'suppress': True,
+            'title': spd.name if options.get('show_title', True) else None,
+            'show_legend': options.get('show_legend', True),
+            'melanopic_curve': show_melanopic,
+            'melanopic_stimulus': show_melanopic,
+            'hideyaxis': options.get('hide_y_axis', False),
+            'xlim': xlim
+        }
+        
+        plot_img = create_plot_image(plot_spectrum, dpi=dpi, **plot_options)
+        
+        return jsonify({
+            'success': True,
+            'metrics': metrics,
+            'plot_image': plot_img
+        })
+        
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

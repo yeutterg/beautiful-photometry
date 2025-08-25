@@ -48,9 +48,14 @@ class SPDManager {
             this.loadReferenceSpectra();
         });
 
-        // Export button
-        document.getElementById('exportBtn').addEventListener('click', () => {
-            this.exportResults();
+        // Export image button
+        document.getElementById('exportImageBtn').addEventListener('click', () => {
+            this.exportImage();
+        });
+        
+        // Export data button
+        document.getElementById('exportDataBtn').addEventListener('click', () => {
+            this.exportData();
         });
     }
 
@@ -88,12 +93,12 @@ class SPDManager {
             const result = await response.json();
 
             if (result.success || result.metrics) {
-                // Store the SPD
+                // Store the SPD with raw data for re-analysis
                 const spdId = `spd_${this.nextId++}`;
                 this.spds.set(spdId, {
                     id: spdId,
                     name: spdName,
-                    data: result.spd_data || null,
+                    data: result.spd_data || null,  // Store raw SPD data for re-analysis
                     metrics: result.metrics,
                     plot_image: result.plot_image,
                     uploadTime: new Date().toISOString()
@@ -102,6 +107,12 @@ class SPDManager {
                 this.updateSPDList();
                 this.updateDropdowns();
                 this.showSuccess(`SPD "${spdName}" uploaded successfully`);
+                
+                // Auto-select the newly uploaded SPD if nothing is selected
+                const primarySelect = document.getElementById('primarySPD');
+                if (!primarySelect.value || primarySelect.value === '') {
+                    primarySelect.value = spdId;
+                }
                 
                 // Close modal
                 bootstrap.Modal.getInstance(document.getElementById('uploadNameModal')).hide();
@@ -163,6 +174,12 @@ class SPDManager {
                 this.updateSPDList();
                 this.updateDropdowns();
                 this.showSuccess(`SPD "${name}" added successfully`);
+                
+                // Auto-select the newly added SPD if nothing is selected
+                const primarySelect = document.getElementById('primarySPD');
+                if (!primarySelect.value || primarySelect.value === '') {
+                    primarySelect.value = spdId;
+                }
                 
                 // Close modal and reset
                 bootstrap.Modal.getInstance(document.getElementById('pasteModal')).hide();
@@ -277,19 +294,68 @@ class SPDManager {
         const primarySPD = this.spds.get(primaryId);
         const compareId = document.getElementById('compareSPD').value;
         
-        // For comparison, we need to re-upload with options
-        if (compareId && this.spds.has(compareId)) {
-            // Handle comparison
-            const compareSPD = this.spds.get(compareId);
-            this.showInfo('Comparison analysis coming soon');
-            this.displayResults(primarySPD, compareSPD);
-        } else {
-            // Single SPD analysis - may need to re-analyze with current options
-            this.displayResults(primarySPD);
+        // Get analysis options
+        const xMinValue = document.getElementById('xMin').value.trim();
+        const xMaxValue = document.getElementById('xMax').value.trim();
+        
+        const options = {
+            normalize: document.getElementById('normalize').checked,
+            melanopic_response: document.getElementById('melanopicResponse').checked,
+            hide_y_axis: document.getElementById('hideYAxis').checked,
+            show_title: document.getElementById('showTitle').checked,
+            show_legend: document.getElementById('showLegend').checked,
+            dpi: parseInt(document.getElementById('plotDPI').value) || 300
+        };
+        
+        // Only include x_min and x_max if both are provided
+        if (xMinValue && xMaxValue) {
+            options.x_min = parseInt(xMinValue);
+            options.x_max = parseInt(xMaxValue);
         }
         
-        // Enable export button
-        document.getElementById('exportBtn').disabled = false;
+        // If we have SPD data, re-analyze with current options
+        if (primarySPD.data) {
+            this.showLoading();
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        spd_data: primarySPD.data,
+                        name: primarySPD.name,
+                        options: options
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Update stored SPD with new analysis results
+                    primarySPD.metrics = result.metrics;
+                    primarySPD.plot_image = result.plot_image;
+                    
+                    // Display results
+                    this.displayResults(primarySPD, compareId && this.spds.has(compareId) ? this.spds.get(compareId) : null);
+                } else {
+                    this.showError(result.error || 'Analysis failed');
+                }
+            } catch (error) {
+                this.showError('Analysis error: ' + error.message);
+            } finally {
+                this.hideLoading();
+            }
+        } else {
+            // Use existing analysis
+            this.displayResults(primarySPD, compareId && this.spds.has(compareId) ? this.spds.get(compareId) : null);
+        }
+        
+        // Enable export buttons and store current plot
+        document.getElementById('exportImageBtn').disabled = false;
+        document.getElementById('exportDataBtn').disabled = false;
+        this.currentPlotImage = primarySPD.plot_image;
+        this.currentSPDName = primarySPD.name;
     }
 
     displayResults(primarySPD, compareSPD = null) {
@@ -362,9 +428,72 @@ class SPDManager {
         }
     }
 
-    exportResults() {
-        // TODO: Implement export functionality
-        this.showInfo('Export functionality coming soon');
+    async exportImage() {
+        if (!this.currentPlotImage) {
+            this.showError('No plot image available to export');
+            return;
+        }
+        
+        try {
+            // Create a blob from the base64 image
+            const response = await fetch(`data:image/png;base64,${this.currentPlotImage}`);
+            const blob = await response.blob();
+            
+            // Create a download link
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `spectrum_${this.currentSPDName || 'analysis'}_${new Date().getTime()}.png`;
+            
+            // Trigger download
+            document.body.appendChild(a);
+            a.click();
+            
+            // Cleanup
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            this.showSuccess('Image exported successfully');
+        } catch (error) {
+            this.showError('Failed to export image: ' + error.message);
+        }
+    }
+    
+    exportData() {
+        const primaryId = document.getElementById('primarySPD').value;
+        if (!primaryId) {
+            this.showError('No SPD selected for export');
+            return;
+        }
+        
+        const spd = this.spds.get(primaryId);
+        if (!spd || !spd.data) {
+            this.showError('No SPD data available to export');
+            return;
+        }
+        
+        // Convert SPD data to CSV format
+        let csv = 'Wavelength,Intensity\n';
+        for (const [wavelength, intensity] of Object.entries(spd.data)) {
+            csv += `${wavelength},${intensity}\n`;
+        }
+        
+        // Create blob and download
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `${spd.name}_data.csv`;
+        
+        document.body.appendChild(a);
+        a.click();
+        
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        this.showSuccess('Data exported successfully');
     }
 
     // Utility methods

@@ -22,15 +22,20 @@ and here: https://stackoverflow.com/a/44960748/10725740
 """
 def wavelength_to_rgb(wavelength, gamma=0.8):
     wavelength = float(wavelength)
-    if wavelength >= 360 and wavelength <= 780:
-        A = 1.
-    else:
-        A=0.5
+    A = 1.0  # Always full alpha for consistent appearance
+    
+    # Handle wavelengths outside visible spectrum
     if wavelength < 380:
-        wavelength = 380.
-    if wavelength >750:
-        wavelength = 750.
-    if wavelength >= 380 and wavelength <= 440:
+        # UV - use violet
+        R = 0.4
+        G = 0.0
+        B = 1.0
+    elif wavelength > 780:
+        # IR - use deep red
+        R = 0.5
+        G = 0.0
+        B = 0.0
+    elif wavelength >= 380 and wavelength <= 440:
         attenuation = 0.3 + 0.7 * (wavelength - 380) / (440 - 380)
         R = ((-(wavelength - 440) / (440 - 380)) * attenuation) ** gamma
         G = 0.0
@@ -51,11 +56,12 @@ def wavelength_to_rgb(wavelength, gamma=0.8):
         R = 1.0
         G = (-(wavelength - 645) / (645 - 580)) ** gamma
         B = 0.0
-    elif wavelength >= 645 and wavelength <= 750:
-        attenuation = 0.3 + 0.7 * (750 - wavelength) / (750 - 645)
+    elif wavelength >= 645 and wavelength <= 780:
+        attenuation = 0.3 + 0.7 * (780 - wavelength) / (780 - 645)
         R = (1.0 * attenuation) ** gamma
         G = 0.0
         B = 0.0
+        # At 780nm, this gives a deep red with R≈0.3
     else:
         R = 0.0
         G = 0.0
@@ -93,15 +99,42 @@ def plot_melanopic_curve(ax, melanopic_curve, melanopic_stimulus=False, spd=None
         if melanopic_curve:
             mel_wavelengths = melanopic_spd.wavelengths
             mel_values = melanopic_spd.values
-            ax.fill(mel_wavelengths, mel_values, facecolor='gray', alpha=0.2)
+            ax.fill(mel_wavelengths, mel_values, facecolor='gray', alpha=0.2, zorder=2)
 
         # plot melanopic stimulus of the SPD in question
         if melanopic_stimulus and spd is not None:
-            mel_spd_2 = melanopic_spd.copy()
-            spd_2 = spd.copy()
-            mel_stimulus = np.multiply(mel_spd_2.values, spd_2.values)
-            ax.plot(mel_spd_2.wavelengths, mel_stimulus, color='white', linewidth=0.2)
-            ax.fill(mel_spd_2.wavelengths, mel_stimulus, facecolor='white', alpha=0.2)
+            # Align the wavelengths between melanopic curve and SPD
+            # Find common wavelength range
+            mel_wavelengths = np.array(melanopic_spd.wavelengths)
+            spd_wavelengths = np.array(spd.wavelengths)
+            mel_values = np.array(melanopic_spd.values)
+            spd_values = np.array(spd.values)
+            
+            # Ensure wavelengths are sorted
+            mel_sorted_idx = np.argsort(mel_wavelengths)
+            mel_wavelengths = mel_wavelengths[mel_sorted_idx]
+            mel_values = mel_values[mel_sorted_idx]
+            
+            spd_sorted_idx = np.argsort(spd_wavelengths)
+            spd_wavelengths = spd_wavelengths[spd_sorted_idx]
+            spd_values = spd_values[spd_sorted_idx]
+            
+            # Get the overlapping range
+            min_wavelength = max(np.min(mel_wavelengths), np.min(spd_wavelengths))
+            max_wavelength = min(np.max(mel_wavelengths), np.max(spd_wavelengths))
+            
+            # Create aligned arrays for the overlapping range
+            common_wavelengths = np.arange(int(min_wavelength), int(max_wavelength) + 1)
+            
+            # Interpolate both curves to common wavelengths
+            mel_interp = np.interp(common_wavelengths, mel_wavelengths, mel_values)
+            spd_interp = np.interp(common_wavelengths, spd_wavelengths, spd_values)
+            
+            # Calculate stimulus
+            mel_stimulus = np.multiply(mel_interp, spd_interp)
+            
+            ax.plot(common_wavelengths, mel_stimulus, color='white', linewidth=0.2, zorder=2)
+            ax.fill(common_wavelengths, mel_stimulus, facecolor='white', alpha=0.2, zorder=2)
 
 
 """
@@ -122,41 +155,113 @@ Plots a single SPD color spectrum
 """
 def plot_spectrum(
         spd, figsize=(8,4), filename=None, ylabel='Intensity', hideyaxis=False, suppress=False, title=None,
-        xlim=(360,780), xtick=30, ytick=0.2, melanopic_curve=False, melanopic_stimulus=False
+        xlim=None, xtick=30, ytick=0.2, melanopic_curve=False, melanopic_stimulus=False, show_legend=True
     ):
-    # create the subplot
-    fig, ax = plt.subplots(1, 1, figsize=figsize, tight_layout=True)
+    # create the subplot with white background
+    fig, ax = plt.subplots(1, 1, figsize=figsize, tight_layout=True, facecolor='white')
+    ax.set_facecolor('white')
 
     # get the SPD values and plot
     wavelengths = spd.wavelengths
     values = spd.values
-    plt.plot(wavelengths, values, linestyle='None')
-
-    # plot melanopic curve
+    
+    # If xlim not specified, use the data range
+    if xlim is None:
+        xlim = (int(np.min(wavelengths)), int(np.max(wavelengths)))
+    
+    # Generate the full spectrum including infrared region
+    y_full = np.linspace(0, max(values) * 1.1, 100)
+    
+    # For visible spectrum (up to 780nm)
+    visible_max = min(780, xlim[1])
+    visible_wavelengths = np.arange(xlim[0], visible_max+1)
+    
+    if len(visible_wavelengths) > 0:
+        X_visible, Y_visible = np.meshgrid(visible_wavelengths, y_full)
+        extent_visible = (xlim[0], visible_max, 0, max(values) * 1.1)
+        
+        spectralmap = generate_color_spectrum((xlim[0], visible_max))
+        
+        # Show the color spectrum in visible range
+        plt.imshow(X_visible, clim=(xlim[0], visible_max), extent=extent_visible, 
+                   cmap=spectralmap, aspect='auto', alpha=1.0, zorder=1)
+    
+    # If spectrum extends beyond 780nm, fade from deep red to black
+    if xlim[1] > 780:
+        ir_start = max(780, xlim[0])
+        ir_wavelengths = np.arange(ir_start, xlim[1]+1)
+        
+        if len(ir_wavelengths) > 0:
+            X_ir, Y_ir = np.meshgrid(ir_wavelengths, y_full)
+            extent_ir = (ir_start, xlim[1], 0, max(values) * 1.1)
+            
+            # Get the color at 780nm (deep red) from wavelength_to_rgb
+            red_780 = wavelength_to_rgb(780, gamma=0.8)[:3]  # Get RGB at 780nm
+            
+            # Create a gradient from red at 780nm to black at 2000nm
+            ir_colors = np.zeros((100, len(ir_wavelengths), 3))
+            
+            for i, wavelength in enumerate(ir_wavelengths):
+                # Calculate fade factor (1.0 at 780nm, 0.0 at 2000nm)
+                if wavelength <= 2000:
+                    fade = 1.0 - (wavelength - 780) / (2000 - 780)
+                else:
+                    fade = 0.0  # Complete black beyond 2000nm
+                
+                # Apply fade to the red color
+                ir_colors[:, i, 0] = red_780[0] * fade  # Red channel
+                ir_colors[:, i, 1] = red_780[1] * fade  # Green channel (should be 0)
+                ir_colors[:, i, 2] = red_780[2] * fade  # Blue channel (should be 0)
+            
+            # Display the infrared region with gradient from red to black
+            plt.imshow(ir_colors, extent=extent_ir, aspect='auto', alpha=1.0, zorder=1)
+    
+    # plot melanopic curve (on top of spectrum but below SPD)
     plot_melanopic_curve(ax, melanopic_curve, melanopic_stimulus, spd)
-
-    # define the plot area coordinates
-    y = np.linspace(0, max(values), 100)
-    X,Y = np.meshgrid(wavelengths, y)
-    extent=(np.min(wavelengths), np.max(wavelengths), 0, np.max(values))
-
-    # generate the color spectrum
-    spectralmap = generate_color_spectrum(xlim)
-
-    # show the image and axis labels
-    plt.imshow(X, clim=xlim,  extent=extent, cmap=spectralmap, aspect='auto')
+    
+    # Fill above the SPD curve with white to hide spectrum above curve
+    plt.fill_between(wavelengths, values, max(values) * 1.1, color='white', alpha=1.0, zorder=3)
+    
+    # Plot the SPD curve on top
+    if show_legend and title:
+        # With legend, show line with label
+        plt.plot(wavelengths, values, label=title, linewidth=2, color='black', zorder=5)
+    else:
+        # Without legend, just fill under the curve with semi-transparent black
+        plt.fill_between(wavelengths, 0, values, color='black', alpha=0.3, zorder=4)
+    
     plt.xlabel('Wavelength (nm)')
     plt.ylabel(ylabel)
 
-    # fill the plot with whitespace
-    plt.fill_between(wavelengths, values, np.max(values), color='w')
+    # Set x-axis limits
+    plt.xlim(xlim)
+    plt.ylim(0, max(values) * 1.05)
 
-    # plot dots to display values at beginning and end of x axis
-    plt.plot(xlim[0], 0, linestyle='None')
-    plt.plot(xlim[1], 0, linestyle='None')
-
-    # set the axis ticks
-    plt.xticks(np.arange(xlim[0], xlim[1]+1, xtick))
+    # Set the axis ticks dynamically based on range
+    x_range = xlim[1] - xlim[0]
+    if x_range <= 400:
+        xtick = 50  # Every 50nm for ranges up to 400nm
+    else:
+        xtick = 100  # Every 100nm for larger ranges
+    
+    # Generate tick positions
+    # Start from a round number
+    start_tick = (xlim[0] // xtick) * xtick
+    if start_tick < xlim[0]:
+        start_tick += xtick
+    
+    tick_positions = list(range(start_tick, xlim[1], xtick))
+    
+    # Always include the first and last values
+    if xlim[0] not in tick_positions:
+        tick_positions.insert(0, xlim[0])
+    if xlim[1] not in tick_positions:
+        tick_positions.append(xlim[1])
+    
+    # Sort and remove duplicates
+    tick_positions = sorted(list(set(tick_positions)))
+    
+    plt.xticks(tick_positions)
     if hideyaxis:
         ax.spines['left'].set_color('none')
         plt.gca().axes.get_yaxis().set_visible(False)
@@ -173,6 +278,10 @@ def plot_spectrum(
     # show title
     if title:
         plt.title(title)
+    
+    # Show legend if requested and we have a labeled plot
+    if show_legend and title:
+        plt.legend(loc='upper right')
     
     # save the figure if a filename was specified
     if filename:
