@@ -99,7 +99,7 @@ def plot_melanopic_curve(ax, melanopic_curve, melanopic_stimulus=False, spd=None
         if melanopic_curve:
             mel_wavelengths = melanopic_spd.wavelengths
             mel_values = melanopic_spd.values
-            ax.fill(mel_wavelengths, mel_values, facecolor='gray', alpha=0.2, zorder=2)
+            ax.fill(mel_wavelengths, mel_values, facecolor='gray', alpha=0.3, zorder=3)
 
         # plot melanopic stimulus of the SPD in question
         if melanopic_stimulus and spd is not None:
@@ -133,8 +133,8 @@ def plot_melanopic_curve(ax, melanopic_curve, melanopic_stimulus=False, spd=None
             # Calculate stimulus
             mel_stimulus = np.multiply(mel_interp, spd_interp)
             
-            ax.plot(common_wavelengths, mel_stimulus, color='white', linewidth=0.2, zorder=2)
-            ax.fill(common_wavelengths, mel_stimulus, facecolor='white', alpha=0.2, zorder=2)
+            ax.plot(common_wavelengths, mel_stimulus, color='white', linewidth=0.2, zorder=3)
+            ax.fill(common_wavelengths, mel_stimulus, facecolor='white', alpha=0.2, zorder=3)
 
 
 """
@@ -155,7 +155,8 @@ Plots a single SPD color spectrum
 """
 def plot_spectrum(
         spd, figsize=(8,4), filename=None, ylabel='Intensity', hideyaxis=False, suppress=False, title=None,
-        xlim=None, xtick=30, ytick=0.2, melanopic_curve=False, melanopic_stimulus=False, show_legend=True
+        xlim=None, xtick=30, ytick=0.2, melanopic_curve=False, melanopic_stimulus=False, show_legend=True,
+        show_spectral_ranges=False
     ):
     # create the subplot with white background
     fig, ax = plt.subplots(1, 1, figsize=figsize, tight_layout=True, facecolor='white')
@@ -170,7 +171,8 @@ def plot_spectrum(
         xlim = (int(np.min(wavelengths)), int(np.max(wavelengths)))
     
     # Generate the full spectrum including infrared region
-    y_full = np.linspace(0, max(values) * 1.1, 100)
+    y_max = max(1.0, max(values) * 1.05)
+    y_full = np.linspace(0, y_max, 100)
     
     # For visible spectrum (up to 780nm)
     visible_max = min(780, xlim[1])
@@ -178,7 +180,7 @@ def plot_spectrum(
     
     if len(visible_wavelengths) > 0:
         X_visible, Y_visible = np.meshgrid(visible_wavelengths, y_full)
-        extent_visible = (xlim[0], visible_max, 0, max(values) * 1.1)
+        extent_visible = (xlim[0], visible_max, 0, y_max)
         
         spectralmap = generate_color_spectrum((xlim[0], visible_max))
         
@@ -193,7 +195,7 @@ def plot_spectrum(
         
         if len(ir_wavelengths) > 0:
             X_ir, Y_ir = np.meshgrid(ir_wavelengths, y_full)
-            extent_ir = (ir_start, xlim[1], 0, max(values) * 1.1)
+            extent_ir = (ir_start, xlim[1], 0, y_max)
             
             # Get the color at 780nm (deep red) from wavelength_to_rgb
             red_780 = wavelength_to_rgb(780, gamma=0.8)[:3]  # Get RGB at 780nm
@@ -216,26 +218,31 @@ def plot_spectrum(
             # Display the infrared region with gradient from red to black
             plt.imshow(ir_colors, extent=extent_ir, aspect='auto', alpha=1.0, zorder=1)
     
-    # plot melanopic curve (on top of spectrum but below SPD)
-    plot_melanopic_curve(ax, melanopic_curve, melanopic_stimulus, spd)
+    # Fill above the SPD curve with white to hide spectrum above curve (do this first)
+    plt.fill_between(wavelengths, values, y_max, color='white', alpha=1.0, zorder=2)
     
-    # Fill above the SPD curve with white to hide spectrum above curve
-    plt.fill_between(wavelengths, values, max(values) * 1.1, color='white', alpha=1.0, zorder=3)
+    # plot melanopic curve (on top of white background)
+    if melanopic_curve or melanopic_stimulus:
+        plot_melanopic_curve(ax, melanopic_curve, melanopic_stimulus, spd)
+        if show_legend:
+            # Add melanopic to legend
+            plt.plot([], [], color='gray', alpha=0.5, linewidth=8, label='Melanopic Response')
     
     # Plot the SPD curve on top
     if show_legend and title:
         # With legend, show line with label
         plt.plot(wavelengths, values, label=title, linewidth=2, color='black', zorder=5)
     else:
-        # Without legend, just fill under the curve with semi-transparent black
-        plt.fill_between(wavelengths, 0, values, color='black', alpha=0.3, zorder=4)
+        # Without legend, don't use transparency - let the spectrum colors show through
+        pass  # The spectrum is already visible underneath
     
     plt.xlabel('Wavelength (nm)')
     plt.ylabel(ylabel)
 
     # Set x-axis limits
     plt.xlim(xlim)
-    plt.ylim(0, max(values) * 1.05)
+    # Y-axis from 0 to 1.0 (or slightly above max if values exceed 1.0)
+    plt.ylim(0, max(1.0, max(values) * 1.05))
 
     # Set the axis ticks dynamically based on range
     x_range = xlim[1] - xlim[0]
@@ -282,6 +289,57 @@ def plot_spectrum(
     # Show legend if requested and we have a labeled plot
     if show_legend and title:
         plt.legend(loc='upper right')
+    
+    # Add spectral range labels as secondary x-axis
+    if show_spectral_ranges:
+        ax2 = ax.twiny()
+        ax2.set_xlim(xlim)
+        
+        # Remove the box around the secondary axis
+        ax2.spines['top'].set_visible(False)
+        ax2.spines['left'].set_visible(False)
+        ax2.spines['right'].set_visible(False)
+        
+        # Define spectral ranges
+        ranges = [
+            (280, 760, 'Visible'),
+            (760, 1400, 'NIR'),
+            (1400, 3000, 'SWIR')
+        ]
+        
+        # Collect tick positions and labels
+        tick_positions = []
+        tick_labels = []
+        
+        for start, end, label in ranges:
+            # Add ticks at range boundaries that are visible
+            if start >= xlim[0] and start <= xlim[1]:
+                tick_positions.append(start)
+                tick_labels.append(str(start))
+                # Add subtle vertical line
+                ax.axvline(x=start, color='gray', linestyle=':', alpha=0.3, linewidth=0.5)
+            
+            if end >= xlim[0] and end <= xlim[1]:
+                tick_positions.append(end)
+                tick_labels.append(str(end))
+                # Add subtle vertical line
+                ax.axvline(x=end, color='gray', linestyle=':', alpha=0.3, linewidth=0.5)
+            
+            # Add range label in the middle
+            if start < xlim[1] and end > xlim[0]:
+                range_start = max(start, xlim[0])
+                range_end = min(end, xlim[1])
+                range_center = (range_start + range_end) / 2
+                
+                if (range_end - range_start) > 50:
+                    ax2.text(range_center, 1.12, label, 
+                            transform=ax2.get_xaxis_transform(),
+                            ha='center', va='bottom', fontsize=9, color='gray')
+        
+        # Set the ticks on the secondary axis
+        ax2.set_xticks(tick_positions)
+        ax2.set_xticklabels(tick_labels, fontsize=8, color='gray')
+        ax2.tick_params(axis='x', colors='gray', pad=2)
     
     # save the figure if a filename was specified
     if filename:

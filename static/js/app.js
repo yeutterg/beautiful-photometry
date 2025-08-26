@@ -8,7 +8,40 @@ class SPDManager {
         this.spds = new Map(); // Store SPDs by ID
         this.nextId = 1;
         this.selectedFile = null;
+        this.loadFromLocalStorage();
         this.initializeEventListeners();
+    }
+    
+    loadFromLocalStorage() {
+        try {
+            const stored = localStorage.getItem('spdData');
+            if (stored) {
+                const data = JSON.parse(stored);
+                this.nextId = data.nextId || 1;
+                if (data.spds) {
+                    data.spds.forEach(spd => {
+                        this.spds.set(spd.id, spd);
+                    });
+                    // Update UI with loaded SPDs
+                    this.updateSPDList();
+                    this.updateDropdowns();
+                }
+            }
+        } catch (e) {
+            console.error('Failed to load from localStorage:', e);
+        }
+    }
+    
+    saveToLocalStorage() {
+        try {
+            const data = {
+                nextId: this.nextId,
+                spds: Array.from(this.spds.values())
+            };
+            localStorage.setItem('spdData', JSON.stringify(data));
+        } catch (e) {
+            console.error('Failed to save to localStorage:', e);
+        }
     }
 
     initializeEventListeners() {
@@ -56,6 +89,26 @@ class SPDManager {
         // Export data button
         document.getElementById('exportDataBtn').addEventListener('click', () => {
             this.exportData();
+        });
+        
+        // Primary SPD dropdown change
+        document.getElementById('primarySPD').addEventListener('change', (e) => {
+            const spdId = e.target.value;
+            if (spdId) {
+                // Populate x-min, x-max, and title when SPD is selected
+                const spd = this.spds.get(spdId);
+                if (spd && spd.data) {
+                    const wavelengths = Object.keys(spd.data).map(w => parseInt(w)).filter(w => !isNaN(w));
+                    if (wavelengths.length > 0) {
+                        const minWavelength = Math.min(...wavelengths);
+                        const maxWavelength = Math.max(...wavelengths);
+                        
+                        document.getElementById('xMin').value = minWavelength;
+                        document.getElementById('xMax').value = maxWavelength;
+                        document.getElementById('chartTitle').value = spd.name;
+                    }
+                }
+            }
         });
     }
 
@@ -106,12 +159,26 @@ class SPDManager {
 
                 this.updateSPDList();
                 this.updateDropdowns();
+                this.saveToLocalStorage();
                 this.showSuccess(`SPD "${spdName}" uploaded successfully`);
                 
                 // Auto-select the newly uploaded SPD if nothing is selected
                 const primarySelect = document.getElementById('primarySPD');
                 if (!primarySelect.value || primarySelect.value === '') {
                     primarySelect.value = spdId;
+                }
+                
+                // Set default X-axis values based on data range
+                if (result.spd_data) {
+                    const wavelengths = Object.keys(result.spd_data).map(w => parseInt(w));
+                    const minWavelength = Math.min(...wavelengths);
+                    const maxWavelength = Math.max(...wavelengths);
+                    
+                    // Update X-axis inputs if they're empty
+                    const xMinInput = document.getElementById('xMin');
+                    const xMaxInput = document.getElementById('xMax');
+                    if (!xMinInput.value) xMinInput.value = minWavelength;
+                    if (!xMaxInput.value) xMaxInput.value = maxWavelength;
                 }
                 
                 // Close modal
@@ -272,6 +339,23 @@ class SPDManager {
         
         // Set as primary SPD in dropdown
         document.getElementById('primarySPD').value = spdId;
+        
+        // Populate x-min and x-max from the SPD data if available
+        const spd = this.spds.get(spdId);
+        if (spd && spd.data) {
+            const wavelengths = Object.keys(spd.data).map(w => parseInt(w)).filter(w => !isNaN(w));
+            if (wavelengths.length > 0) {
+                const minWavelength = Math.min(...wavelengths);
+                const maxWavelength = Math.max(...wavelengths);
+                
+                // Set the values in the input fields
+                document.getElementById('xMin').value = minWavelength;
+                document.getElementById('xMax').value = maxWavelength;
+                
+                // Also update the chart title with the SPD name
+                document.getElementById('chartTitle').value = spd.name;
+            }
+        }
     }
 
     removeSPD(spdId) {
@@ -279,6 +363,7 @@ class SPDManager {
             this.spds.delete(spdId);
             this.updateSPDList();
             this.updateDropdowns();
+            this.saveToLocalStorage();
             this.showSuccess('SPD removed');
         }
     }
@@ -304,8 +389,16 @@ class SPDManager {
             hide_y_axis: document.getElementById('hideYAxis').checked,
             show_title: document.getElementById('showTitle').checked,
             show_legend: document.getElementById('showLegend').checked,
-            dpi: parseInt(document.getElementById('plotDPI').value) || 300
+            show_spectral_ranges: document.getElementById('showSpectralRanges').checked,
+            width: parseInt(document.getElementById('plotWidth').value) || 1000,
+            height: parseInt(document.getElementById('plotHeight').value) || 600
         };
+        
+        // Add custom title if provided
+        const chartTitle = document.getElementById('chartTitle').value.trim();
+        if (chartTitle) {
+            options.custom_title = chartTitle;
+        }
         
         // Only include x_min and x_max if both are provided
         if (xMinValue && xMaxValue) {
@@ -324,7 +417,7 @@ class SPDManager {
                     },
                     body: JSON.stringify({
                         spd_data: primarySPD.data,
-                        name: primarySPD.name,
+                        name: chartTitle || primarySPD.name,
                         options: options
                     })
                 });

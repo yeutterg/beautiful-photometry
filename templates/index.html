@@ -162,16 +162,25 @@
                                     Hide Y-Axis
                                 </label>
                             </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="showTitle" checked>
-                                <label class="form-check-label" for="showTitle">
-                                    Show Title
-                                </label>
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="form-check me-2">
+                                    <input class="form-check-input" type="checkbox" id="showTitle" checked>
+                                    <label class="form-check-label" for="showTitle">
+                                        Show Title
+                                    </label>
+                                </div>
+                                <input type="text" class="form-control form-control-sm" id="chartTitle" placeholder="Chart Title" style="max-width: 200px;">
                             </div>
-                            <div class="form-check mb-3">
+                            <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="showLegend" checked>
                                 <label class="form-check-label" for="showLegend">
                                     Show Legend
+                                </label>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="showSpectralRanges">
+                                <label class="form-check-label" for="showSpectralRanges">
+                                    Show Spectral Ranges
                                 </label>
                             </div>
                         </div>
@@ -187,14 +196,15 @@
                                     <input type="number" class="form-control form-control-sm" id="xMax" placeholder="Auto" min="300" max="2000">
                                 </div>
                             </div>
-                            <div class="mb-2">
-                                <label for="plotDPI" class="form-label form-label-sm">Resolution (DPI)</label>
-                                <select class="form-select form-select-sm" id="plotDPI">
-                                    <option value="100">100 DPI (Low)</option>
-                                    <option value="150">150 DPI (Medium)</option>
-                                    <option value="300" selected>300 DPI (High)</option>
-                                    <option value="600">600 DPI (Very High)</option>
-                                </select>
+                            <div class="row mb-2">
+                                <div class="col-6">
+                                    <label for="plotWidth" class="form-label form-label-sm">Width (px)</label>
+                                    <input type="number" class="form-control form-control-sm" id="plotWidth" value="1000" min="400" max="4000">
+                                </div>
+                                <div class="col-6">
+                                    <label for="plotHeight" class="form-label form-label-sm">Height (px)</label>
+                                    <input type="number" class="form-control form-control-sm" id="plotHeight" value="600" min="300" max="2400">
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-4">

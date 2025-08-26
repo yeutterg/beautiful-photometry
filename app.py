@@ -55,8 +55,12 @@ def process_uploaded_file(file, spd_name=None, weight=1.0, normalize=False, phot
     if not spd_name:
         spd_name = secure_filename(file.filename).split('.')[0]
     
+    # Generate unique filename to avoid conflicts
+    import uuid
+    unique_filename = f"{uuid.uuid4()}_{secure_filename(file.filename)}"
+    temp_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+    
     # Save file temporarily
-    temp_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(file.filename))
     file.save(temp_path)
     
     try:
@@ -133,6 +137,9 @@ def upload_file():
         })
         
     except Exception as e:
+        import traceback
+        print(f"Upload error: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 @app.route('/compare', methods=['POST'])
@@ -314,8 +321,10 @@ def analyze_spd():
         else:
             xlim = None  # Let plot_spectrum determine from data
         
-        # Get DPI from options
-        dpi = int(options.get('dpi', 300))
+        # Get plot dimensions from options (convert pixels to inches at 100 DPI)
+        width_px = int(options.get('width', 1000))
+        height_px = int(options.get('height', 600))
+        figsize = (width_px / 100, height_px / 100)
         
         # Combine melanopic options - if melanopic_response is true, show both curve and stimulus
         show_melanopic = options.get('melanopic_response', False)
@@ -323,17 +332,19 @@ def analyze_spd():
         # Create plot with options
         plot_options = {
             'spd': spd,
-            'figsize': (10, 6),
+            'figsize': figsize,
             'suppress': True,
             'title': spd.name if options.get('show_title', True) else None,
             'show_legend': options.get('show_legend', True),
             'melanopic_curve': show_melanopic,
             'melanopic_stimulus': show_melanopic,
             'hideyaxis': options.get('hide_y_axis', False),
-            'xlim': xlim
+            'xlim': xlim,
+            'show_spectral_ranges': options.get('show_spectral_ranges', False)
         }
         
-        plot_img = create_plot_image(plot_spectrum, dpi=dpi, **plot_options)
+        # Use 100 DPI since we're controlling size via figsize
+        plot_img = create_plot_image(plot_spectrum, dpi=100, **plot_options)
         
         return jsonify({
             'success': True,
