@@ -50,6 +50,48 @@ def create_plot_image(plot_func, dpi=300, *args, **kwargs):
     img_str = base64.b64encode(img_buffer.getvalue()).decode()
     return img_str
 
+def detect_file_format(filepath):
+    """Detect if file is UPRtek format or manual CSV format"""
+    try:
+        with open(filepath, 'r', encoding='utf-8-sig') as f:
+            first_line = f.readline().strip()
+            
+            # Check for UPRtek format - tab-delimited with "Model Name" in first column
+            if '\t' in first_line:
+                parts = first_line.split('\t')
+                if len(parts) >= 2 and 'model' in parts[0].lower():
+                    # It's a UPRtek file
+                    return 'uprtek'
+            
+            # Check if it's a manual CSV with wavelength,intensity format
+            # Try to parse the first line as numbers
+            if ',' in first_line:
+                parts = first_line.split(',')
+                if len(parts) >= 2:
+                    try:
+                        # Try to convert both parts to numbers
+                        float(parts[0])
+                        float(parts[1])
+                        return None  # It's a manual CSV
+                    except ValueError:
+                        # Not numbers, might be headers - check second line
+                        second_line = f.readline().strip()
+                        if second_line and ',' in second_line:
+                            parts = second_line.split(',')
+                            if len(parts) >= 2:
+                                try:
+                                    float(parts[0])
+                                    float(parts[1])
+                                    return None  # Manual CSV with headers
+                                except ValueError:
+                                    pass
+            
+            # Default to manual CSV format
+            return None
+    except Exception as e:
+        print(f"Error detecting file format: {e}")
+        return None
+
 def process_uploaded_file(file, spd_name=None, weight=1.0, normalize=False, photometer=None):
     """Process an uploaded file and return an SPD object"""
     if not spd_name:
@@ -64,8 +106,16 @@ def process_uploaded_file(file, spd_name=None, weight=1.0, normalize=False, phot
     file.save(temp_path)
     
     try:
+        # Auto-detect file format if photometer not specified
+        if photometer is None or photometer == 'auto':
+            detected_format = detect_file_format(temp_path)
+            photometer = detected_format
+            print(f"Detected file format: {detected_format if detected_format else 'manual CSV'}")
+        
         # Import the SPD
+        print(f"Calling import_spd with photometer={repr(photometer)}")
         spd = import_spd(temp_path, spd_name, weight, normalize, photometer)
+        print(f"SPD imported successfully")
         return spd
     finally:
         # Clean up temporary file
@@ -78,11 +128,17 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    print(f"\n=== Starting upload process ===", flush=True)
+    import sys
+    sys.stdout.flush()
+    sys.stderr.flush()
     try:
         if 'file' not in request.files:
             return jsonify({'error': 'No file provided'}), 400
         
         file = request.files['file']
+        print(f"File received: {file.filename}")
+        
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
         
@@ -97,8 +153,13 @@ def upload_file():
         if photometer == 'none':
             photometer = None
         
+        print(f"Parameters: name='{spd_name}', weight={weight}, normalize={normalize}, photometer={photometer}")
+        
         # Process the file
         spd = process_uploaded_file(file, spd_name, weight, normalize, photometer)
+        print(f"SPD processed: {spd.name if spd else 'None'}")
+        
+        print(f"Processed SPD: {spd.name}, wavelengths: {len(spd.wavelengths)}, shape: {spd.shape}")
         
         # Calculate metrics
         metrics = {
@@ -108,6 +169,7 @@ def upload_file():
             'scotopic_photopic_ratio': round(scotopic_photopic_ratio(spd), 3),
             'melanopic_photopic_ratio': round(melanopic_photopic_ratio(spd), 3)
         }
+        print(f"Calculated metrics: {metrics}")
         
         # Create plot
         plot_options = {
@@ -126,21 +188,28 @@ def upload_file():
         spd_data = {}
         wavelengths = spd.wavelengths
         values = spd.values
+        print(f"Extracting SPD data: {len(wavelengths)} wavelengths")
         for i, wavelength in enumerate(wavelengths):
             spd_data[str(int(wavelength))] = float(values[i])
+        print(f"Extracted SPD data keys (first 5): {list(spd_data.keys())[:5]}")
         
-        return jsonify({
+        response_data = {
             'success': True,
             'metrics': metrics,
             'plot_image': plot_image,
             'spd_data': spd_data
-        })
+        }
+        print(f"Response ready: success={response_data['success']}, has_metrics={bool(metrics)}, has_plot={bool(plot_image)}, spd_data_count={len(spd_data)}")
+        print("=== Upload process complete ===\n")
+        
+        return jsonify(response_data)
         
     except Exception as e:
         import traceback
-        print(f"Upload error: {str(e)}")
+        error_msg = f"Upload error: {str(e)}"
+        print(error_msg)
         print(traceback.format_exc())
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': error_msg, 'success': False}), 500
 
 @app.route('/compare', methods=['POST'])
 def compare_spectra():
@@ -354,6 +423,13 @@ def analyze_spd():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    import traceback
+    print(f"Unhandled exception: {e}", flush=True)
+    print(traceback.format_exc(), flush=True)
+    return jsonify({'error': str(e), 'success': False}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8080) 

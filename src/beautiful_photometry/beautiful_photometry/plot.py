@@ -26,11 +26,10 @@ def wavelength_to_rgb(wavelength, gamma=0.8):
     
     # Handle wavelengths outside visible spectrum
     if wavelength < 380:
-        # UV - use violet
-        R = 0.4
-        G = 0.0
-        B = 1.0
-    elif wavelength > 780:
+        # UV - use same color as 380nm to avoid discontinuity
+        wavelength = 380  # Process as 380nm
+    
+    if wavelength > 780:
         # IR - use deep red
         R = 0.5
         G = 0.0
@@ -176,17 +175,27 @@ def plot_spectrum(
     
     # For visible spectrum (up to 780nm)
     visible_max = min(780, xlim[1])
-    visible_wavelengths = np.arange(xlim[0], visible_max+1)
+    
+    # Create wavelength range starting slightly after xlim[0] to avoid edge artifacts
+    # This prevents the spectrum from bleeding into the axis area
+    spectrum_start = xlim[0] + 0.5  # Start half a unit after xlim[0]
+    visible_wavelengths = np.arange(spectrum_start, visible_max+1)
     
     if len(visible_wavelengths) > 0:
         X_visible, Y_visible = np.meshgrid(visible_wavelengths, y_full)
-        extent_visible = (xlim[0], visible_max, 0, y_max)
+        # Keep the extent starting at the actual xlim
+        extent_visible = (spectrum_start, visible_max, 0, y_max)
         
-        spectralmap = generate_color_spectrum((xlim[0], visible_max))
+        # Generate color spectrum - ensure we have a proper range
+        # Use 360-780 for color generation to ensure proper colors
+        color_range = (min(360, xlim[0]), visible_max)
+        spectralmap = generate_color_spectrum(color_range)
         
         # Show the color spectrum in visible range
-        plt.imshow(X_visible, clim=(xlim[0], visible_max), extent=extent_visible, 
-                   cmap=spectralmap, aspect='auto', alpha=1.0, zorder=1)
+        # The small offset prevents rendering artifacts at the boundary
+        plt.imshow(X_visible, clim=(spectrum_start, visible_max), extent=extent_visible, 
+                   cmap=spectralmap, aspect='auto', alpha=1.0, zorder=1, 
+                   interpolation='bilinear', origin='lower')
     
     # If spectrum extends beyond 780nm, fade from deep red to black
     if xlim[1] > 780:
@@ -219,7 +228,11 @@ def plot_spectrum(
             plt.imshow(ir_colors, extent=extent_ir, aspect='auto', alpha=1.0, zorder=1)
     
     # Fill above the SPD curve with white to hide spectrum above curve (do this first)
-    plt.fill_between(wavelengths, values, y_max, color='white', alpha=1.0, zorder=2)
+    # Ensure we only fill where we have data to avoid artifacts
+    valid_mask = ~np.isnan(values)
+    if np.any(valid_mask):
+        plt.fill_between(wavelengths[valid_mask], values[valid_mask], y_max, 
+                         color='white', alpha=1.0, zorder=2, linewidth=0)
     
     # plot melanopic curve (on top of white background)
     if melanopic_curve or melanopic_stimulus:

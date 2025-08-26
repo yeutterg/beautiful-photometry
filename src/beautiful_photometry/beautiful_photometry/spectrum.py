@@ -31,7 +31,18 @@ def import_spectral_csv(filename):
         reader = csv.reader(csvFile, delimiter=',')
 
         for count, row in enumerate(reader):
-            spd[int(row[0])] = float(row[1])
+            # Skip empty rows
+            if not row or len(row) < 2:
+                continue
+                
+            try:
+                # Try to parse as wavelength and intensity
+                wavelength = float(row[0])
+                intensity = float(row[1])
+                spd[int(wavelength)] = intensity
+            except (ValueError, IndexError):
+                # Skip header rows or invalid data
+                continue
 
     return spd
 
@@ -196,9 +207,12 @@ SpectralPowerDistribution
     The SPD as an object usable by the Colour library
 """
 def import_spd(filename, spd_name=None, weight=1.0, normalize=False, photometer=None):
+    print(f"import_spd called with photometer={repr(photometer)}")
     if photometer == 'uprtek':
+        print(f"Using uprtek_import_spectrum")
         spd_dict = uprtek_import_spectrum(filename)
     else:
+        print(f"Using import_spectral_csv")
         spd_dict = import_spectral_csv(filename)
 
     if not spd_name:

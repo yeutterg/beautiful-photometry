@@ -138,13 +138,15 @@ def plot_spectrum(
     # define the plot area coordinates
     y = np.linspace(0, max(values), 100)
     X,Y = np.meshgrid(wavelengths, y)
-    extent=(np.min(wavelengths), np.max(wavelengths), 0, np.max(values))
+    # Slightly offset the extent to avoid edge artifacts at boundaries
+    extent=(np.min(wavelengths) + 0.01, np.max(wavelengths) - 0.01, 0, np.max(values))
 
     # generate the color spectrum
     spectralmap = generate_color_spectrum(xlim)
 
     # show the image and axis labels
-    plt.imshow(X, clim=xlim,  extent=extent, cmap=spectralmap, aspect='auto')
+    # Use clip_on=True to ensure the spectrum doesn't bleed outside the plot area
+    img = plt.imshow(X, clim=xlim, extent=extent, cmap=spectralmap, aspect='auto', clip_on=True)
     plt.xlabel('Wavelength (nm)')
     plt.ylabel(ylabel)
 

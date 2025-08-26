@@ -144,8 +144,11 @@ class SPDManager {
             });
 
             const result = await response.json();
+            console.log('Upload response:', result);
+            console.log('Response status:', response.status);
 
-            if (result.success || result.metrics) {
+            if ((result.success || result.metrics) && response.ok) {
+                console.log('Processing successful upload for:', spdName);
                 // Store the SPD with raw data for re-analysis
                 const spdId = `spd_${this.nextId++}`;
                 this.spds.set(spdId, {
@@ -156,6 +159,7 @@ class SPDManager {
                     plot_image: result.plot_image,
                     uploadTime: new Date().toISOString()
                 });
+                console.log('SPD stored with ID:', spdId);
 
                 this.updateSPDList();
                 this.updateDropdowns();
@@ -188,9 +192,11 @@ class SPDManager {
                 document.getElementById('fileInput').value = '';
                 this.selectedFile = null;
             } else {
-                this.showError(result.error || 'Upload failed');
+                console.error('Upload failed:', result);
+                this.showError(result.error || `Upload failed: ${response.status} ${response.statusText}`);
             }
         } catch (error) {
+            console.error('Network error:', error);
             this.showError('Network error: ' + error.message);
         } finally {
             this.hideLoading();

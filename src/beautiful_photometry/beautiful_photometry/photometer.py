@@ -71,37 +71,116 @@ dict
     A dictionary with the selected data
 """
 def uprtek_file_import(filename: str, returntype: dict):
-    with open(filename, mode='r', encoding='us-ascii') as csvFile:
-        reader = csv.reader(csvFile, delimiter='\t')
-
-        # Get UPRtek model from the first line, then set rows for reading data
-        model = next(reader)[1]
-        if model == 'CV600':
-            spd_start = 40
-            r_start = 18
-            r_end = 33
-        elif model == 'MK350NPLUS':
-            spd_start = 46
-            r_start = 26
-            r_end = 41
-        else:
-            print('UPRtek model not available. Using the MK350N format, which could result in errors!')
-            spd_start = 46
-            r_start = 26
-            r_end = 41
-
-        # Extract the data and return
+    """Import UPRtek file with robust error handling"""
+    try:
+        # Try multiple encodings
+        encodings = ['utf-8-sig', 'utf-8', 'latin-1', 'cp1252']
+        lines = None
+        
+        for encoding in encodings:
+            try:
+                with open(filename, mode='r', encoding=encoding) as f:
+                    lines = f.readlines()
+                break
+            except UnicodeDecodeError:
+                continue
+        
+        if lines is None:
+            print(f"Error: Could not read file {filename} with any encoding")
+            return {} if returntype == 'spd' else {}
+        
+        # Parse the file manually
+        data_lines = []
+        for line in lines:
+            # Split by tab
+            parts = line.strip().split('\t')
+            if parts and parts[0]:  # Only add non-empty lines
+                data_lines.append(parts)
+        
+        if not data_lines:
+            print(f"Error: No data found in {filename}")
+            return {} if returntype == 'spd' else {}
+        
+        # Get UPRtek model from the first line (safely)
+        model = 'CV600'  # Default
+        if len(data_lines) > 0:
+            if len(data_lines[0]) > 1:
+                model = str(data_lines[0][1]).strip()
+            else:
+                # Try to find model in first few lines
+                for i in range(min(5, len(data_lines))):
+                    if len(data_lines[i]) > 1 and 'CV600' in str(data_lines[i][1]):
+                        model = 'CV600'
+                        break
+                    elif len(data_lines[i]) > 1 and 'MK350' in str(data_lines[i][1]):
+                        model = 'MK350NPLUS'
+                        break
+        
+        print(f"Detected UPRtek model: {model}")
+        
+        # Extract spectrum data
         if returntype == 'spd':
             spd = {}
             
-            for row in itertools.islice(reader, spd_start, None):
-                spd[int(row[0][0:3])] = float(row[1])
-
+            # Find wavelength data by looking for patterns like "380nm" or just "380"
+            wavelength_found = False
+            for i, row in enumerate(data_lines):
+                if len(row) < 2:
+                    continue
+                
+                # Check first column for wavelength pattern
+                first_col = str(row[0]).strip()
+                
+                # Try to parse as wavelength
+                wavelength = None
+                try:
+                    # Check for "XXXnm" format
+                    if 'nm' in first_col.lower():
+                        # Extract number before 'nm'
+                        num_str = first_col.lower().replace('nm', '').strip()
+                        wavelength = int(float(num_str))
+                    # Check for plain number in wavelength range
+                    elif first_col.replace('.', '').isdigit():
+                        num = float(first_col)
+                        if 300 <= num <= 2000:
+                            wavelength = int(num)
+                    
+                    # If we found a wavelength, try to get the intensity
+                    if wavelength is not None:
+                        intensity = float(row[1])
+                        spd[wavelength] = intensity
+                        wavelength_found = True
+                except (ValueError, TypeError, IndexError):
+                    # If we were finding wavelengths and now can't, we're done
+                    if wavelength_found:
+                        break
+                    continue
+            
+            if not spd:
+                print(f"Warning: No spectrum data found in {filename}")
+            else:
+                print(f"Extracted {len(spd)} wavelength points from {filename}")
+                print(f"Wavelength range: {min(spd.keys())}nm to {max(spd.keys())}nm")
+            
             return spd
+            
         elif returntype == 'r_vals':
             r_vals = {}
-
-            for row in itertools.islice(reader, r_start, r_end):
-                r_vals[row[0]] = float(row[1])
-
+            
+            # Look for R values (R1, R2, etc.)
+            for row in data_lines:
+                if len(row) >= 2:
+                    first_col = str(row[0]).strip()
+                    if first_col.startswith('R') and len(first_col) <= 3:
+                        try:
+                            r_vals[first_col] = float(row[1])
+                        except (ValueError, TypeError):
+                            continue
+            
             return r_vals
+            
+    except Exception as e:
+        print(f"Error processing UPRtek file {filename}: {e}")
+        import traceback
+        traceback.print_exc()
+        return {} if returntype == 'spd' else {}
