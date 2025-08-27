@@ -1,21 +1,45 @@
 # Beautiful Photometry
 
-A comprehensive tool for analyzing and visualizing spectral power distributions (SPDs) with both a modern web interface and command-line interface.
+A modern web application for photometry analysis with a React frontend and Python Flask backend.
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![Node.js 18+](https://img.shields.io/badge/node.js-18+-green.svg)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+## Project Structure
+
+```
+beautiful-photometry/
+├── backend/                 # Python Flask backend
+│   ├── app.py              # Main Flask application
+│   ├── requirements.txt    # Python dependencies
+│   ├── Dockerfile          # Backend container configuration
+│   ├── src/                # Source code for photometry calculations
+│   ├── CSVs/              # SPD data files
+│   │   ├── examples/      # Pre-loaded example SPD files
+│   │   └── user/          # User-uploaded SPD files
+│   ├── uploads/           # Temporary upload directory
+│   └── out/               # Generated output files
+├── frontend/              # Next.js React frontend
+│   ├── app/              # Next.js app directory
+│   ├── components/       # React components
+│   ├── lib/              # Utility libraries
+│   └── Dockerfile        # Frontend container configuration
+├── old/                  # Legacy code and examples
+├── docker-compose.yml    # Multi-container Docker configuration
+├── LICENSE              # MIT License
+└── README.md           # This file
+```
 
 ## Features
 
-- **Web Interface**: Upload SPD files or enter CSV data directly
-- **Command Line Interface**: Modernized CLI with subcommands for different operations
-- **Multiple File Formats**: Support for CSV, XLS, and TXT files
-- **Photometer Support**: Built-in support for UPRtek spectrophotometers
-- **Advanced Plotting**: Control line colors, styles, text size, fonts, titles, and legend positions
-- **Export Options**: Save plots in PNG, SVG, and PDF formats
-- **Metrics Calculation**: Melanopic ratios, responses, and photopic ratios
-- **Batch Processing**: Process entire directories of SPD files
+- **Modern UI**: Clean, responsive interface built with Next.js and Tailwind CSS
+- **Library Management**: Import and organize SPD data
+- **Photometric Analysis**: Calculate CRI, CCT, Rf, Rg, melanopic ratios
+- **Real-time Updates**: Automatic chart refresh when parameters change
+- **Multiple File Formats**: Support for CSV, XLS, TXT, and UPRtek files
+- **Dark/Light Mode**: Toggle between themes
+- **Export Options**: Save charts and data in various formats
 
 ## Quick Start
 

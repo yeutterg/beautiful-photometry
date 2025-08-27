@@ -1,28 +1,52 @@
 version: '3.8'
 
 services:
-  beautiful-photometry:
-    build: .
+  # Backend Python Flask service
+  backend:
+    build: ./backend
+    container_name: beautiful-photometry-backend
     ports:
-      - "8080:8080"
+      - "5001:8080"
     volumes:
-      - ./CSVs:/app/CSVs:ro
-      - ./uploads:/app/uploads
-      - ./out:/app/out
+      - ./backend/CSVs:/app/CSVs:ro
+      - ./backend/uploads:/app/uploads
+      - ./backend/out:/app/out
     environment:
       - FLASK_ENV=development
       - FLASK_DEBUG=1
     restart: unless-stopped
     command: app.py
+    networks:
+      - app-network
+
+  # Frontend Next.js service
+  frontend:
+    build: ./frontend
+    container_name: beautiful-photometry-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8080
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - app-network
 
   # Alternative service for CLI usage
   beautiful-photometry-cli:
-    build: .
+    build: ./backend
     volumes:
-      - ./CSVs:/app/CSVs:ro
-      - ./out:/app/out
+      - ./backend/CSVs:/app/CSVs:ro
+      - ./backend/out:/app/out
     environment:
       - PYTHONPATH=/app
     profiles:
       - cli
     command: cli.py
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
