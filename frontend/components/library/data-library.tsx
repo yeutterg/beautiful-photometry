@@ -7,45 +7,87 @@ import { Trash2, BarChart } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { useAnalysisStore, useLibraryStore } from "@/lib/store"
-
-// Mock data - will be replaced with real data from API
-const mockData = [
-  {
-    id: "1",
-    title: "LED 2700K Sample",
-    type: "SPD" as const,
-    createdDate: new Date("2024-01-15"),
-    data: Object.fromEntries(
-      Array.from({length: 81}, (_, i) => [
-        (380 + i * 5).toString(),
-        Math.random() * 100
-      ])
-    )
-  },
-  {
-    id: "2",
-    title: "Daylight Measurement",
-    type: "SPD" as const,
-    createdDate: new Date("2024-01-16"),
-    data: Object.fromEntries(
-      Array.from({length: 81}, (_, i) => [
-        (380 + i * 5).toString(),
-        Math.random() * 100
-      ])
-    )
-  },
-]
+import { api } from "@/lib/api"
 
 export function DataLibrary() {
   const router = useRouter()
   const [selectedItems, setSelectedItems] = useState<string[]>([])
-  const [data, setData] = useState(mockData)
+  const [data, setData] = useState<Array<{
+    id: string
+    title: string
+    type: 'SPD'
+    createdDate: Date
+    data?: Record<string, number>
+  }>>([])
+  const [loading, setLoading] = useState(true)
   const { setCurrentSPDs } = useAnalysisStore()
   const { addItem, items } = useLibraryStore()
   
-  // Use library items instead of mock data when available
+  // Load library items from API on mount (only if empty)
   useEffect(() => {
-    if (items.length > 0) {
+    const loadLibraryItems = async () => {
+      try {
+        setLoading(true)
+        
+        // If we already have items in the store, use them
+        if (items.length > 0) {
+          setData(items.filter(item => item.type === 'SPD').map(item => ({
+            id: item.id,
+            title: item.title,
+            type: 'SPD' as const,
+            createdDate: item.createdDate,
+            data: item.data,
+            filepath: item.metadata?.filepath,
+            folder: item.metadata?.folder
+          })))
+          setLoading(false)
+          return
+        }
+        
+        // Otherwise load from API
+        const response = await api.getLibraryItems()
+        const libraryItems = response.items || []
+        
+        // Convert API items to library format and add to store
+        const formattedItems = libraryItems.map(item => ({
+          id: item.id,
+          title: item.title,
+          type: 'SPD' as const,
+          createdDate: new Date(item.createdDate),
+          data: item.data || {},
+          filepath: item.filepath,
+          folder: item.folder
+        }))
+        
+        // Add items to store and set local data
+        formattedItems.forEach(item => {
+          addItem({
+            title: item.title,
+            type: item.type,
+            data: item.data || {},
+            metadata: {
+              filepath: item.filepath,
+              folder: item.folder
+            }
+          })
+        })
+        
+        setData(formattedItems)
+      } catch (error) {
+        console.error('Failed to load library items:', error)
+        toast.error('Failed to load library items')
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    loadLibraryItems()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  
+  // Sync with library store changes
+  useEffect(() => {
+    if (!loading && items.length > 0) {
       setData(items.filter(item => item.type === 'SPD').map(item => ({
         id: item.id,
         title: item.title,
@@ -53,18 +95,8 @@ export function DataLibrary() {
         createdDate: item.createdDate,
         data: item.data
       })))
-    } else {
-      // Initialize with mock data
-      mockData.forEach(item => {
-        addItem({
-          title: item.title,
-          type: item.type,
-          data: item.data
-        })
-      })
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items])
+  }, [items, loading])
 
   const handleSelectionChange = (selectedIds: string[]) => {
     setSelectedItems(selectedIds)
@@ -100,6 +132,24 @@ export function DataLibrary() {
 
   const handleRowClick = (item: { id: string; title: string; type: string; createdDate: Date; data?: Record<string, number> }) => {
     if (item.type === "SPD") {
+      console.log('Row clicked:', item)
+      console.log('SPD data available:', !!item.data, 'Data keys:', item.data ? Object.keys(item.data).length : 0)
+      
+      // Ensure item is in the library store with the same ID
+      const storeItem = items.find(i => i.id === item.id)
+      if (!storeItem) {
+        console.log('Item not in store, checking by title...')
+        // Try to find by title as fallback
+        const titleMatch = items.find(i => i.title === item.title)
+        if (titleMatch) {
+          console.log('Found by title, using ID:', titleMatch.id)
+          setCurrentSPDs([titleMatch.id])
+          router.push("/photometrics")
+          toast.success(`Loaded ${item.title} for analysis`)
+          return
+        }
+      }
+      
       // Load single SPD into analysis store  
       setCurrentSPDs([item.id])
       router.push("/photometrics")

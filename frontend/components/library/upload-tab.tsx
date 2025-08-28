@@ -4,20 +4,41 @@ import { useCallback } from "react"
 import { useDropzone } from "react-dropzone"
 import { Upload } from "lucide-react"
 import { toast } from "sonner"
+import { api } from "@/lib/api"
+import { useLibraryStore } from "@/lib/store"
 
 interface UploadTabProps {
   dataType: string
 }
 
 export function UploadTab({ dataType }: UploadTabProps) {
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const { addItem } = useLibraryStore()
+  
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
     // Handle file upload
-    acceptedFiles.forEach((file) => {
-      // TODO: Implement file upload to backend
-      console.log("Uploading file:", file.name)
-      toast.success(`File "${file.name}" selected for upload`)
-    })
-  }, [])
+    for (const file of acceptedFiles) {
+      try {
+        toast.loading(`Uploading ${file.name}...`)
+        const result = await api.uploadFile(file)
+        
+        // Add to library store
+        if (result.spd_data) {
+          addItem({
+            title: result.metrics?.name || file.name.replace(/\.[^/.]+$/, ''),
+            type: 'SPD',
+            data: result.spd_data,
+          })
+          toast.success(`Successfully imported ${file.name}`)
+        }
+        
+        // Refresh the page to reload library from filesystem
+        window.location.reload()
+      } catch (error) {
+        console.error('Upload error:', error)
+        toast.error(`Failed to upload ${file.name}`)
+      }
+    }
+  }, [addItem])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

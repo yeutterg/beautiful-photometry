@@ -1,16 +1,36 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { AnalysisOptions } from "@/components/photometrics/analysis-options"
 import { ResultsDisplay } from "@/components/photometrics/results-display"
 import { useAnalysisStore, useLibraryStore } from "@/lib/store"
 import { api } from "@/lib/api"
 import { toast } from "sonner"
 
+// Custom hook for debouncing
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value)
+  
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+    
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [value, delay])
+  
+  return debouncedValue
+}
+
 export default function PhotometricsPage() {
   const [isLoading, setIsLoading] = useState(false)
   const { currentSPDs, analysisOptions, setResults } = useAnalysisStore()
   const { getItem } = useLibraryStore()
+  
+  // Debounce the analysis options to prevent rapid re-renders
+  const debouncedOptions = useDebounce(analysisOptions, 300)
 
   const analyzeData = useCallback(async () => {
     if (currentSPDs.length === 0) {
@@ -30,17 +50,19 @@ export default function PhotometricsPage() {
         return
       }
 
-      // Map our options to API format
+      // Map our options to API format - use debouncedOptions
       const apiOptions = {
-        normalize: analysisOptions.normalize,
-        melanopic_curve: analysisOptions.showMelanopic,
+        normalize: debouncedOptions.normalize,
+        melanopic_curve: debouncedOptions.showMelanopic,
         melanopic_stimulus: false,
-        hideyaxis: analysisOptions.hideYAxis,
-        x_min: analysisOptions.minWavelength,
-        x_max: analysisOptions.maxWavelength,
-        title: analysisOptions.showTitle ? analysisOptions.chartTitle : undefined,
-        chart_width: analysisOptions.chartWidth,
-        chart_height: analysisOptions.chartHeight
+        hideyaxis: debouncedOptions.hideYAxis,
+        show_legend: debouncedOptions.showLegend,
+        show_spectral_ranges: debouncedOptions.showSpectralRanges,
+        x_min: debouncedOptions.minWavelength,
+        x_max: debouncedOptions.maxWavelength,
+        title: debouncedOptions.showTitle ? debouncedOptions.chartTitle : undefined,
+        chart_width: debouncedOptions.chartWidth,
+        chart_height: debouncedOptions.chartHeight
       }
       
       // Call API to analyze
@@ -48,6 +70,10 @@ export default function PhotometricsPage() {
         spds: spds.map(s => ({ id: s!.id, title: s!.title, data: s!.data })),
         options: apiOptions
       })
+      
+      console.log('API result:', result)
+      console.log('Plot image available:', !!result.plot_image)
+      console.log('Plot image length:', result.plot_image ? result.plot_image.length : 0)
 
       // Convert API result to our store format
       const analysisResults = {
@@ -71,21 +97,19 @@ export default function PhotometricsPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [currentSPDs, analysisOptions, getItem, setResults])
+  }, [currentSPDs, debouncedOptions, getItem, setResults])
 
-  // Auto-update when SPDs change
+  // Auto-update when SPDs or debounced options change
   useEffect(() => {
-    analyzeData()
-  }, [currentSPDs, analyzeData])
-
-  const handleOptionsChange = useCallback(() => {
-    analyzeData()
-  }, [analyzeData])
+    if (currentSPDs.length > 0) {
+      analyzeData()
+    }
+  }, [currentSPDs, debouncedOptions, analyzeData])
   return (
     <div className="flex h-full">
       {/* Left Panel - Options */}
       <div className="w-80 border-r p-6 overflow-y-auto bg-muted/10">
-        <AnalysisOptions onOptionsChange={handleOptionsChange} />
+        <AnalysisOptions />
       </div>
       
       {/* Right Panel - Results */}

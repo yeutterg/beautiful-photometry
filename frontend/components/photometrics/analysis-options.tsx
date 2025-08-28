@@ -1,25 +1,43 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { useAnalysisStore } from "@/lib/store"
 
-export function AnalysisOptions({ onOptionsChange }: { onOptionsChange?: () => void }) {
+export function AnalysisOptions() {
   const { analysisOptions, updateOptions } = useAnalysisStore()
   
-  const handleChange = (updates: Partial<typeof analysisOptions>) => {
-    updateOptions(updates)
-    onOptionsChange?.()
+  // Local state for numeric inputs to prevent updates on every keystroke
+  const [localValues, setLocalValues] = useState({
+    minWavelength: analysisOptions.minWavelength,
+    maxWavelength: analysisOptions.maxWavelength,
+    chartWidth: analysisOptions.chartWidth,
+    chartHeight: analysisOptions.chartHeight
+  })
+  
+  const handleNumericChange = (field: keyof typeof localValues, value: number) => {
+    setLocalValues(prev => ({ ...prev, [field]: value }))
+  }
+  
+  const handleNumericBlur = (field: keyof typeof localValues) => {
+    updateOptions({ [field]: localValues[field] })
   }
 
+  // Remove automatic trigger on mount to prevent double rendering
+  
+  // Sync local values with store when store changes externally
   useEffect(() => {
-    // Trigger initial update when component mounts
-    onOptionsChange?.()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    setLocalValues({
+      minWavelength: analysisOptions.minWavelength,
+      maxWavelength: analysisOptions.maxWavelength,
+      chartWidth: analysisOptions.chartWidth,
+      chartHeight: analysisOptions.chartHeight
+    })
+  }, [analysisOptions.minWavelength, analysisOptions.maxWavelength, 
+      analysisOptions.chartWidth, analysisOptions.chartHeight])
 
   return (
     <div className="space-y-6">
@@ -31,14 +49,14 @@ export function AnalysisOptions({ onOptionsChange }: { onOptionsChange?: () => v
             <Checkbox 
               id="show-title" 
               checked={analysisOptions.showTitle}
-              onCheckedChange={(checked) => handleChange({ showTitle: checked as boolean })}
+              onCheckedChange={(checked) => updateOptions({ showTitle: checked as boolean })}
             />
             <Label htmlFor="show-title" className="font-normal">Chart Title:</Label>
             <Input 
               placeholder="Enter title" 
               className="flex-1"
               value={analysisOptions.chartTitle}
-              onChange={(e) => handleChange({ chartTitle: e.target.value })}
+              onChange={(e) => updateOptions({ chartTitle: e.target.value })}
               disabled={!analysisOptions.showTitle}
             />
           </div>
@@ -46,7 +64,7 @@ export function AnalysisOptions({ onOptionsChange }: { onOptionsChange?: () => v
             <Checkbox 
               id="show-legend"
               checked={analysisOptions.showLegend}
-              onCheckedChange={(checked) => handleChange({ showLegend: checked as boolean })}
+              onCheckedChange={(checked) => updateOptions({ showLegend: checked as boolean })}
             />
             <Label htmlFor="show-legend">Show Legend</Label>
           </div>
@@ -54,7 +72,7 @@ export function AnalysisOptions({ onOptionsChange }: { onOptionsChange?: () => v
             <Checkbox 
               id="hide-y-axis"
               checked={analysisOptions.hideYAxis}
-              onCheckedChange={(checked) => handleChange({ hideYAxis: checked as boolean })}
+              onCheckedChange={(checked) => updateOptions({ hideYAxis: checked as boolean })}
             />
             <Label htmlFor="hide-y-axis">Hide Y Axis</Label>
           </div>
@@ -72,8 +90,9 @@ export function AnalysisOptions({ onOptionsChange }: { onOptionsChange?: () => v
             <Input 
               id="min-wavelength"
               type="number" 
-              value={analysisOptions.minWavelength}
-              onChange={(e) => handleChange({ minWavelength: parseInt(e.target.value) || 380 })}
+              value={localValues.minWavelength}
+              onChange={(e) => handleNumericChange('minWavelength', parseInt(e.target.value) || 380)}
+              onBlur={() => handleNumericBlur('minWavelength')}
             />
           </div>
           <div>
@@ -81,8 +100,9 @@ export function AnalysisOptions({ onOptionsChange }: { onOptionsChange?: () => v
             <Input 
               id="max-wavelength"
               type="number" 
-              value={analysisOptions.maxWavelength}
-              onChange={(e) => handleChange({ maxWavelength: parseInt(e.target.value) || 780 })}
+              value={localValues.maxWavelength}
+              onChange={(e) => handleNumericChange('maxWavelength', parseInt(e.target.value) || 780)}
+              onBlur={() => handleNumericBlur('maxWavelength')}
             />
           </div>
         </div>
@@ -98,7 +118,7 @@ export function AnalysisOptions({ onOptionsChange }: { onOptionsChange?: () => v
             <Checkbox 
               id="normalize"
               checked={analysisOptions.normalize}
-              onCheckedChange={(checked) => handleChange({ normalize: checked as boolean })}
+              onCheckedChange={(checked) => updateOptions({ normalize: checked as boolean })}
             />
             <Label htmlFor="normalize">Normalize SPD</Label>
           </div>
@@ -106,7 +126,7 @@ export function AnalysisOptions({ onOptionsChange }: { onOptionsChange?: () => v
             <Checkbox 
               id="melanopic"
               checked={analysisOptions.showMelanopic}
-              onCheckedChange={(checked) => handleChange({ showMelanopic: checked as boolean })}
+              onCheckedChange={(checked) => updateOptions({ showMelanopic: checked as boolean })}
             />
             <Label htmlFor="melanopic">Show Melanopic Response</Label>
           </div>
@@ -114,7 +134,7 @@ export function AnalysisOptions({ onOptionsChange }: { onOptionsChange?: () => v
             <Checkbox 
               id="spectral-ranges"
               checked={analysisOptions.showSpectralRanges}
-              onCheckedChange={(checked) => handleChange({ showSpectralRanges: checked as boolean })}
+              onCheckedChange={(checked) => updateOptions({ showSpectralRanges: checked as boolean })}
             />
             <Label htmlFor="spectral-ranges">Show Spectral Ranges</Label>
           </div>
@@ -132,8 +152,9 @@ export function AnalysisOptions({ onOptionsChange }: { onOptionsChange?: () => v
             <Input 
               id="chart-width"
               type="number" 
-              value={analysisOptions.chartWidth}
-              onChange={(e) => handleChange({ chartWidth: parseInt(e.target.value) || 800 })}
+              value={localValues.chartWidth}
+              onChange={(e) => handleNumericChange('chartWidth', parseInt(e.target.value) || 800)}
+              onBlur={() => handleNumericBlur('chartWidth')}
             />
           </div>
           <div>
@@ -141,8 +162,9 @@ export function AnalysisOptions({ onOptionsChange }: { onOptionsChange?: () => v
             <Input 
               id="chart-height"
               type="number" 
-              value={analysisOptions.chartHeight}
-              onChange={(e) => handleChange({ chartHeight: parseInt(e.target.value) || 400 })}
+              value={localValues.chartHeight}
+              onChange={(e) => handleNumericChange('chartHeight', parseInt(e.target.value) || 400)}
+              onBlur={() => handleNumericBlur('chartHeight')}
             />
           </div>
         </div>

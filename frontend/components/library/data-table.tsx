@@ -110,7 +110,6 @@ export function DataTable({
           <TableRow
             key={item.id}
             className={item.type === "SPD" ? "cursor-pointer hover:bg-muted/50 transition-colors" : ""}
-            onClick={() => item.type === "SPD" ? onRowClick(item) : undefined}
             title={item.type === "SPD" ? "Click to analyze this SPD" : undefined}
           >
             <TableCell onClick={(e) => e.stopPropagation()}>
@@ -121,7 +120,13 @@ export function DataTable({
                 }
               />
             </TableCell>
-            <TableCell onClick={(e) => e.stopPropagation()}>
+            <TableCell 
+              onClick={() => {
+                if (item.type === "SPD" && editingId !== item.id) {
+                  onRowClick(item)
+                }
+              }}
+            >
               {editingId === item.id ? (
                 <Input
                   value={editingTitle}
@@ -133,17 +138,23 @@ export function DataTable({
                   }}
                   className="h-8"
                   autoFocus
+                  onClick={(e) => e.stopPropagation()}
                 />
               ) : (
                 <span
-                  className="cursor-text hover:bg-muted px-2 py-1 rounded"
-                  onClick={() => startEditing(item.id, item.title)}
+                  className="hover:bg-muted px-2 py-1 rounded"
+                  onDoubleClick={(e) => {
+                    e.stopPropagation()
+                    startEditing(item.id, item.title)
+                  }}
                 >
                   {item.title}
                 </span>
               )}
             </TableCell>
-            <TableCell>
+            <TableCell
+              onClick={() => item.type === "SPD" ? onRowClick(item) : undefined}
+            >
               <Badge variant={item.type === "SPD" ? "default" : "secondary"}>
                 {item.type}
               </Badge>

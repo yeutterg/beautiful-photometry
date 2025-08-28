@@ -2,12 +2,17 @@ import os
 import io
 import base64
 import json
+from datetime import datetime
 from flask import Flask, render_template, request, jsonify, send_file
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
+import threading
+
+# Create a lock for matplotlib operations to ensure thread safety
+matplotlib_lock = threading.Lock()
 import numpy as np
 from colour import SpectralDistribution, SpectralShape
 import tempfile
@@ -38,21 +43,49 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def create_plot_image(plot_func, dpi=300, *args, **kwargs):
-    """Create a plot and return it as a base64 encoded image"""
-    # Create the plot
-    plot_func(*args, **kwargs)
-    
-    # Save to bytes buffer
-    img_buffer = io.BytesIO()
-    plt.savefig(img_buffer, format='png', dpi=dpi, bbox_inches='tight')
-    img_buffer.seek(0)
-    
-    # Clear the plot
-    plt.close()
-    
-    # Convert to base64
-    img_str = base64.b64encode(img_buffer.getvalue()).decode()
-    return img_str
+    """Create a plot and return it as a base64 encoded image with thread safety"""
+    with matplotlib_lock:
+        try:
+            # Clear any existing plots first
+            plt.close('all')
+            
+            # Create a new figure explicitly
+            fig = plt.figure(figsize=kwargs.get('figsize', (10, 6)))
+            
+            # Create the plot
+            plot_func(*args, **kwargs)
+            
+            # Get the current figure (in case plot_func created a new one)
+            current_fig = plt.gcf()
+            
+            # Save to bytes buffer
+            img_buffer = io.BytesIO()
+            current_fig.savefig(img_buffer, format='png', dpi=dpi, bbox_inches='tight', 
+                               facecolor='white', edgecolor='none')
+            img_buffer.seek(0)
+            
+            # Convert to base64
+            img_str = base64.b64encode(img_buffer.getvalue()).decode()
+            
+            # Clear the figure and close it
+            current_fig.clear()
+            plt.close(current_fig)
+            plt.close('all')  # Extra safety to close any remaining figures
+            
+            # Clear matplotlib's internal state
+            plt.clf()
+            plt.cla()
+            
+            return img_str
+            
+        except Exception as e:
+            # Make sure to clean up even if there's an error
+            plt.close('all')
+            print(f"Error creating plot: {str(e)}")
+            raise
+        finally:
+            # Final cleanup
+            img_buffer.close() if 'img_buffer' in locals() else None
 
 def detect_file_format(filepath):
     """Detect if file is UPRtek format or manual CSV format"""
@@ -96,39 +129,83 @@ def detect_file_format(filepath):
         print(f"Error detecting file format: {e}")
         return None
 
+def load_spd_from_file(filepath):
+    """Load SPD data from a file and return as dict"""
+    try:
+        # Auto-detect file format
+        photometer = detect_file_format(filepath)
+        
+        # Import the SPD
+        filename = os.path.basename(filepath)
+        name = os.path.splitext(filename)[0]
+        spd = import_spd(filepath, name, weight=1.0, normalize=False, photometer=photometer)
+        
+        # Extract wavelength-value pairs
+        spd_data = {}
+        for i, wavelength in enumerate(spd.wavelengths):
+            spd_data[str(int(wavelength))] = float(spd.values[i])
+        
+        return spd_data
+    except Exception as e:
+        print(f"Error loading SPD from {filepath}: {e}")
+        return None
+
 def process_uploaded_file(file, spd_name=None, weight=1.0, normalize=False, photometer=None):
     """Process an uploaded file and return an SPD object"""
     if not spd_name:
         spd_name = secure_filename(file.filename).split('.')[0]
     
+    # Save file permanently to CSVs/user folder
+    user_csv_dir = os.path.join('CSVs', 'user')
+    os.makedirs(user_csv_dir, exist_ok=True)
+    
     # Generate unique filename to avoid conflicts
     import uuid
-    unique_filename = f"{uuid.uuid4()}_{secure_filename(file.filename)}"
-    temp_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    original_filename = secure_filename(file.filename)
+    base_name, ext = os.path.splitext(original_filename)
+    unique_filename = f"{base_name}_{timestamp}{ext}"
+    file_path = os.path.join(user_csv_dir, unique_filename)
     
-    # Save file temporarily
-    file.save(temp_path)
+    # Save file permanently
+    file.save(file_path)
     
     try:
         # Auto-detect file format if photometer not specified
         if photometer is None or photometer == 'auto':
-            detected_format = detect_file_format(temp_path)
+            detected_format = detect_file_format(file_path)
             photometer = detected_format
             print(f"Detected file format: {detected_format if detected_format else 'manual CSV'}")
         
         # Import the SPD
         print(f"Calling import_spd with photometer={repr(photometer)}")
-        spd = import_spd(temp_path, spd_name, weight, normalize, photometer)
-        print(f"SPD imported successfully")
+        spd = import_spd(file_path, spd_name, weight, normalize, photometer)
+        print(f"SPD imported successfully, saved to: {file_path}")
         return spd
-    finally:
-        # Clean up temporary file
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
+    except Exception as e:
+        # If import fails, remove the saved file
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        raise
 
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/health')
+def health():
+    """Health check endpoint that tests matplotlib"""
+    try:
+        # Test matplotlib
+        with matplotlib_lock:
+            plt.close('all')
+            fig = plt.figure(figsize=(5, 3))
+            plt.plot([1, 2, 3], [1, 2, 3])
+            plt.title('Test Plot')
+            plt.close(fig)
+        return jsonify({'status': 'healthy', 'matplotlib': 'ok'})
+    except Exception as e:
+        return jsonify({'status': 'unhealthy', 'error': str(e)}), 500
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -211,6 +288,72 @@ def upload_file():
     except Exception as e:
         import traceback
         error_msg = f"Upload error: {str(e)}"
+        print(error_msg)
+        print(traceback.format_exc())
+        return jsonify({'error': error_msg, 'success': False}), 500
+
+@app.route('/paste', methods=['POST'])
+def paste_csv():
+    """Handle pasted CSV data and save to CSVs/user folder"""
+    try:
+        data = request.get_json()
+        csv_data = data.get('csv_data', '')
+        spd_name = data.get('name', 'Pasted SPD')
+        
+        if not csv_data.strip():
+            return jsonify({'error': 'No CSV data provided'}), 400
+        
+        # Save CSV data to file in CSVs/user folder
+        user_csv_dir = os.path.join('CSVs', 'user')
+        os.makedirs(user_csv_dir, exist_ok=True)
+        
+        # Generate unique filename
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        safe_name = secure_filename(spd_name).replace(' ', '_')
+        if not safe_name:
+            safe_name = 'pasted_spd'
+        filename = f"{safe_name}_{timestamp}.csv"
+        filepath = os.path.join(user_csv_dir, filename)
+        
+        # Write CSV data to file
+        with open(filepath, 'w') as f:
+            f.write(csv_data)
+        
+        try:
+            # Import the SPD from the saved file
+            spd = import_spd(filepath, spd_name, weight=1.0, normalize=False, photometer=None)
+            
+            # Calculate metrics
+            metrics = {
+                'name': spd.name,
+                'melanopic_ratio': round(melanopic_ratio(spd), 3),
+                'melanopic_response': round(melanopic_response(spd), 1),
+                'scotopic_photopic_ratio': round(scotopic_photopic_ratio(spd), 3),
+                'melanopic_photopic_ratio': round(melanopic_photopic_ratio(spd), 3)
+            }
+            
+            # Extract SPD data for response
+            spd_data = {}
+            for i, wavelength in enumerate(spd.wavelengths):
+                spd_data[str(int(wavelength))] = float(spd.values[i])
+            
+            return jsonify({
+                'success': True,
+                'metrics': metrics,
+                'spd_data': spd_data,
+                'filepath': filepath,
+                'message': f'SPD saved to {filename}'
+            })
+            
+        except Exception as e:
+            # If import fails, remove the saved file
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            raise
+            
+    except Exception as e:
+        import traceback
+        error_msg = f"Paste error: {str(e)}"
         print(error_msg)
         print(traceback.format_exc())
         return jsonify({'error': error_msg, 'success': False}), 500
@@ -338,6 +481,68 @@ def get_reference_spectra():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/library')
+def get_library_items():
+    """Get all SPD files from CSVs folder and subdirectories"""
+    try:
+        library_items = []
+        csv_dir = 'CSVs'
+        
+        # Walk through all subdirectories in CSVs folder
+        for root, dirs, files in os.walk(csv_dir):
+            for filename in files:
+                if filename.lower().endswith(('.csv', '.txt', '.xls')) and not filename.startswith('.'):
+                    filepath = os.path.join(root, filename)
+                    rel_path = os.path.relpath(filepath, csv_dir)
+                    
+                    # Determine source folder (examples or user)
+                    source = 'examples' if 'examples' in rel_path else 'user' if 'user' in rel_path else 'other'
+                    
+                    # Get file modification time
+                    mtime = os.path.getmtime(filepath)
+                    created_date = datetime.fromtimestamp(mtime).isoformat()
+                    
+                    # Try to load the SPD data
+                    try:
+                        spd_data = load_spd_from_file(filepath)
+                        if spd_data:
+                            library_items.append({
+                                'id': rel_path.replace(os.sep, '_').replace('.', '_'),
+                                'title': os.path.splitext(filename)[0],
+                                'filepath': rel_path,
+                                'folder': os.path.dirname(rel_path) if os.path.dirname(rel_path) else 'root',
+                                'type': 'SPD',
+                                'createdDate': created_date,
+                                'data': spd_data
+                            })
+                    except Exception as e:
+                        print(f"Error loading {filepath}: {str(e)}")
+                        continue
+        
+        return jsonify({'items': library_items})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/library/<path:filepath>')
+def get_library_item(filepath):
+    """Get a specific SPD file from the library"""
+    try:
+        full_path = os.path.join('CSVs', filepath)
+        if not os.path.exists(full_path):
+            return jsonify({'error': 'File not found'}), 404
+            
+        spd_data = load_spd_from_file(full_path)
+        if spd_data:
+            return jsonify({
+                'filepath': filepath,
+                'name': os.path.splitext(os.path.basename(filepath))[0],
+                'data': spd_data
+            })
+        else:
+            return jsonify({'error': 'Could not parse SPD file'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/analyze', methods=['POST'])
 def analyze_spd():
     """Analyze an SPD with given options"""
@@ -395,29 +600,54 @@ def analyze_spd():
             xlim = None  # Let plot_spectrum determine from data
         
         # Get plot dimensions from options (convert pixels to inches at 100 DPI)
-        width_px = int(options.get('width', 1000))
-        height_px = int(options.get('height', 600))
+        width_px = int(options.get('chart_width', 1000))
+        height_px = int(options.get('chart_height', 600))
         figsize = (width_px / 100, height_px / 100)
         
-        # Combine melanopic options - if melanopic_response is true, show both curve and stimulus
-        show_melanopic = options.get('melanopic_response', False)
+        # Get melanopic option from frontend
+        show_melanopic = options.get('melanopic_curve', False)
+        
+        # Get title from options, fallback to SPD name
+        chart_title = options.get('title')
+        if chart_title is None or chart_title == '':
+            chart_title = spd.name
         
         # Create plot with options
         plot_options = {
             'spd': spd,
             'figsize': figsize,
             'suppress': True,
-            'title': spd.name if options.get('show_title', True) else None,
+            'title': chart_title,
             'show_legend': options.get('show_legend', True),
             'melanopic_curve': show_melanopic,
             'melanopic_stimulus': show_melanopic,
-            'hideyaxis': options.get('hide_y_axis', False),
+            'hideyaxis': options.get('hideyaxis', False),
             'xlim': xlim,
             'show_spectral_ranges': options.get('show_spectral_ranges', False)
         }
         
         # Use 100 DPI since we're controlling size via figsize
-        plot_img = create_plot_image(plot_spectrum, dpi=100, **plot_options)
+        try:
+            print(f"Creating plot with options: {plot_options}")
+            plot_img = create_plot_image(plot_spectrum, dpi=100, **plot_options)
+            print(f"Plot created successfully, size: {len(plot_img)} bytes")
+        except Exception as plot_error:
+            print(f"Error creating plot: {str(plot_error)}")
+            import traceback
+            traceback.print_exc()
+            # Try to create a simple fallback plot
+            try:
+                plt.close('all')
+                simple_options = {
+                    'spd': spd,
+                    'figsize': (10, 6),
+                    'suppress': True,
+                    'title': spd.name
+                }
+                plot_img = create_plot_image(plot_spectrum, dpi=100, **simple_options)
+                print("Fallback plot created successfully")
+            except:
+                return jsonify({'error': f'Failed to create plot: {str(plot_error)}'}), 500
         
         return jsonify({
             'success': True,
@@ -426,6 +656,9 @@ def analyze_spd():
         })
         
     except Exception as e:
+        print(f"Analyze endpoint error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.errorhandler(Exception)

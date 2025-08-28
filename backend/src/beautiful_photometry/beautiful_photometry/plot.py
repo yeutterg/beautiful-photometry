@@ -242,12 +242,8 @@ def plot_spectrum(
             plt.plot([], [], color='gray', alpha=0.5, linewidth=8, label='Melanopic Response')
     
     # Plot the SPD curve on top
-    if show_legend and title:
-        # With legend, show line with label
-        plt.plot(wavelengths, values, label=title, linewidth=2, color='black', zorder=5)
-    else:
-        # Without legend, don't use transparency - let the spectrum colors show through
-        pass  # The spectrum is already visible underneath
+    # Always plot the curve, use spd.name for legend label
+    plt.plot(wavelengths, values, label=spd.name, linewidth=2, color='black', zorder=5)
     
     plt.xlabel('Wavelength (nm)')
     plt.ylabel(ylabel)
@@ -299,8 +295,8 @@ def plot_spectrum(
     if title:
         plt.title(title)
     
-    # Show legend if requested and we have a labeled plot
-    if show_legend and title:
+    # Show legend if requested
+    if show_legend:
         plt.legend(loc='upper right')
     
     # Add spectral range labels as secondary x-axis
