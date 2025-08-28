@@ -143,6 +143,57 @@ export function AnalysisOptions() {
 
       <Separator />
 
+      {/* SPD Line Settings */}
+      <div>
+        <h3 className="font-medium mb-3 text-base text-primary">SPD Line Settings</h3>
+        <div className="space-y-3">
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="show-spd-line"
+              checked={analysisOptions.showSpdLine}
+              onCheckedChange={(checked) => updateOptions({ showSpdLine: checked as boolean })}
+            />
+            <Label htmlFor="show-spd-line">Show SPD Line</Label>
+          </div>
+          <div>
+            <Label htmlFor="spd-line-color">Line Color</Label>
+            <div className="flex gap-2 items-center">
+              <Input 
+                id="spd-line-color"
+                type="color"
+                value={analysisOptions.spdLineColor}
+                onChange={(e) => updateOptions({ spdLineColor: e.target.value })}
+                className="w-20 h-10 p-1 cursor-pointer"
+                disabled={!analysisOptions.showSpdLine}
+              />
+              <Input
+                type="text"
+                value={analysisOptions.spdLineColor}
+                onChange={(e) => updateOptions({ spdLineColor: e.target.value })}
+                className="flex-1"
+                disabled={!analysisOptions.showSpdLine}
+                placeholder="#000000"
+              />
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="spd-line-weight">Line Weight (px)</Label>
+            <Input 
+              id="spd-line-weight"
+              type="number"
+              min="0.5"
+              max="10"
+              step="0.5"
+              value={analysisOptions.spdLineWeight}
+              onChange={(e) => updateOptions({ spdLineWeight: parseFloat(e.target.value) || 2 })}
+              disabled={!analysisOptions.showSpdLine}
+            />
+          </div>
+        </div>
+      </div>
+
+      <Separator />
+
       {/* Chart Display Settings */}
       <div>
         <h3 className="font-medium mb-3 text-base text-primary">Chart Display Settings</h3>

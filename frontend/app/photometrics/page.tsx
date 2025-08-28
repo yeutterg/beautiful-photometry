@@ -64,7 +64,10 @@ export default function PhotometricsPage() {
         x_max: debouncedOptions.maxWavelength,
         title: debouncedOptions.showTitle ? debouncedOptions.chartTitle : undefined,
         chart_width: debouncedOptions.chartWidth,
-        chart_height: debouncedOptions.chartHeight
+        chart_height: debouncedOptions.chartHeight,
+        show_spd_line: debouncedOptions.showSpdLine,
+        spd_line_color: debouncedOptions.spdLineColor,
+        spd_line_weight: debouncedOptions.spdLineWeight
       }
       
       // Call API to analyze

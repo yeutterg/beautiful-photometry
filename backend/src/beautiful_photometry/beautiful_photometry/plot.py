@@ -155,7 +155,7 @@ Plots a single SPD color spectrum
 def plot_spectrum(
         spd, figsize=(8,4), filename=None, ylabel='Intensity', hideyaxis=False, suppress=False, title=None,
         xlim=None, xtick=30, ytick=0.2, melanopic_curve=False, melanopic_stimulus=False, show_legend=True,
-        show_spectral_ranges=False
+        show_spectral_ranges=False, show_spd_line=True, spd_line_color='black', spd_line_weight=2
     ):
     # create the subplot with white background
     fig, ax = plt.subplots(1, 1, figsize=figsize, tight_layout=True, facecolor='white')
@@ -170,7 +170,11 @@ def plot_spectrum(
         xlim = (int(np.min(wavelengths)), int(np.max(wavelengths)))
     
     # Generate the full spectrum including infrared region
-    y_max = max(1.0, max(values) * 1.05)
+    # For normalized data, cap at 1.0, otherwise add 5% headroom
+    if max(values) <= 1.0:
+        y_max = 1.0
+    else:
+        y_max = max(values) * 1.05
     y_full = np.linspace(0, y_max, 100)
     
     # For visible spectrum (up to 780nm)
@@ -229,9 +233,10 @@ def plot_spectrum(
     
     # Fill above the SPD curve with white to hide spectrum above curve (do this first)
     # Ensure we only fill where we have data to avoid artifacts
+    # Extend slightly beyond y_max to ensure complete coverage
     valid_mask = ~np.isnan(values)
     if np.any(valid_mask):
-        plt.fill_between(wavelengths[valid_mask], values[valid_mask], y_max, 
+        plt.fill_between(wavelengths[valid_mask], values[valid_mask], y_max * 1.1, 
                          color='white', alpha=1.0, zorder=2, linewidth=0)
     
     # plot melanopic curve (on top of white background)
@@ -241,17 +246,18 @@ def plot_spectrum(
             # Add melanopic to legend
             plt.plot([], [], color='gray', alpha=0.5, linewidth=8, label='Melanopic Response')
     
-    # Plot the SPD curve on top
-    # Always plot the curve, use spd.name for legend label
-    plt.plot(wavelengths, values, label=spd.name, linewidth=2, color='black', zorder=5)
+    # Plot the SPD curve on top (if enabled)
+    if show_spd_line:
+        plt.plot(wavelengths, values, label=spd.name, linewidth=spd_line_weight, 
+                 color=spd_line_color, zorder=5)
     
     plt.xlabel('Wavelength (nm)')
     plt.ylabel(ylabel)
 
     # Set x-axis limits
     plt.xlim(xlim)
-    # Y-axis from 0 to 1.0 (or slightly above max if values exceed 1.0)
-    plt.ylim(0, max(1.0, max(values) * 1.05))
+    # Y-axis from 0 to y_max (which is already calculated above)
+    plt.ylim(0, y_max)
 
     # Set the axis ticks dynamically based on range
     x_range = xlim[1] - xlim[0]

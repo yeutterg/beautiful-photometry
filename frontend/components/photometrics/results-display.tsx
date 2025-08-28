@@ -18,14 +18,76 @@ import Image from "next/image"
 export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
   const { results, currentSPDs } = useAnalysisStore()
   
-  const handleExportChart = () => {
-    // TODO: Implement chart export
-    toast.info("Chart export will be implemented")
+  const handleExportChart = async () => {
+    if (!results?.chart) {
+      toast.error("No chart available to export")
+      return
+    }
+    
+    try {
+      // Convert base64 to blob
+      const base64Data = results.chart.replace(/^data:image\/\w+;base64,/, '')
+      const byteCharacters = atob(base64Data)
+      const byteNumbers = new Array(byteCharacters.length)
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i)
+      }
+      const byteArray = new Uint8Array(byteNumbers)
+      const blob = new Blob([byteArray], { type: 'image/png' })
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `spd_chart_${new Date().toISOString().split('T')[0]}.png`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      
+      toast.success("Chart exported successfully")
+    } catch (error) {
+      console.error('Export error:', error)
+      toast.error("Failed to export chart")
+    }
   }
 
   const handleExportData = () => {
-    // TODO: Implement data export
-    toast.info("Data export will be implemented")
+    if (!results?.metrics) {
+      toast.error("No metrics available to export")
+      return
+    }
+    
+    try {
+      // Convert metrics to CSV format
+      const csvContent = [
+        ['Metric', 'Value'],
+        ['CCT', results.metrics.cct || 'N/A'],
+        ['CRI Ra', results.metrics.cri || 'N/A'],
+        ['Rf (Fidelity)', results.metrics.rf || 'N/A'],
+        ['Rg (Gamut)', results.metrics.rg || 'N/A'],
+        ['Melanopic Ratio', results.metrics.melanopicRatio || 'N/A'],
+        ['S/P Ratio', results.metrics.spRatio || 'N/A'],
+        ['M/P Ratio', results.metrics.mpRatio || 'N/A'],
+        ['Blue Percentage', results.metrics.bluePercentage || 'N/A']
+      ].map(row => row.join(',')).join('\n')
+      
+      // Create download link
+      const blob = new Blob([csvContent], { type: 'text/csv' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `spd_metrics_${new Date().toISOString().split('T')[0]}.csv`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      
+      toast.success("Metrics exported successfully")
+    } catch (error) {
+      console.error('Export error:', error)
+      toast.error("Failed to export metrics")
+    }
   }
 
   // Mock metrics data

@@ -622,6 +622,16 @@ def analyze_spd():
         chart_title = options.get('title')
         print(f"DEBUG: chart_title from options: {repr(chart_title)}, type: {type(chart_title)}")
         
+        # Get SPD line options
+        show_spd_line = options.get('show_spd_line', True)
+        spd_line_color = options.get('spd_line_color', 'black')
+        spd_line_weight = options.get('spd_line_weight', 2)
+        
+        # Convert hex color to matplotlib color format if needed
+        if spd_line_color.startswith('#'):
+            # Hex color is fine for matplotlib
+            pass
+        
         # Create plot with options
         plot_options = {
             'spd': spd,
@@ -632,7 +642,10 @@ def analyze_spd():
             'melanopic_stimulus': show_melanopic,
             'hideyaxis': options.get('hideyaxis', False),
             'xlim': xlim,
-            'show_spectral_ranges': options.get('show_spectral_ranges', False)
+            'show_spectral_ranges': options.get('show_spectral_ranges', False),
+            'show_spd_line': show_spd_line,
+            'spd_line_color': spd_line_color,
+            'spd_line_weight': spd_line_weight
         }
         
         # Only add title if it's explicitly provided and not empty
