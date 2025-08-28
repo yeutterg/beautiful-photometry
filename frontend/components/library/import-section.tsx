@@ -13,7 +13,11 @@ import { Label } from "@/components/ui/label"
 import { UploadTab } from "./upload-tab"
 import { ManualEntryTab } from "./manual-entry-tab"
 
-export function ImportSection() {
+interface ImportSectionProps {
+  onDataChange?: () => void
+}
+
+export function ImportSection({ onDataChange }: ImportSectionProps) {
   const [dataType, setDataType] = useState("spd")
 
   return (
@@ -43,10 +47,10 @@ export function ImportSection() {
           <TabsTrigger value="manual">Manual Data Entry</TabsTrigger>
         </TabsList>
         <TabsContent value="upload" className="mt-4">
-          <UploadTab dataType={dataType} />
+          <UploadTab dataType={dataType} onUploadComplete={onDataChange} />
         </TabsContent>
         <TabsContent value="manual" className="mt-4">
-          <ManualEntryTab dataType={dataType} />
+          <ManualEntryTab dataType={dataType} onEntryComplete={onDataChange} />
         </TabsContent>
       </Tabs>
     </div>

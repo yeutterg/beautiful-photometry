@@ -236,7 +236,23 @@ def upload_file():
         
         print(f"Parameters: name='{spd_name}', weight={weight}, normalize={normalize}, photometer={photometer}")
         
-        # Process the file
+        # Save the uploaded file to CSVs/user folder
+        user_csv_dir = os.path.join('CSVs', 'user')
+        os.makedirs(user_csv_dir, exist_ok=True)
+        
+        # Generate unique filename
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        safe_name = secure_filename(file.filename).rsplit('.', 1)[0]
+        extension = file.filename.rsplit('.', 1)[1] if '.' in file.filename else 'csv'
+        saved_filename = f"{safe_name}_{timestamp}.{extension}"
+        saved_filepath = os.path.join(user_csv_dir, saved_filename)
+        
+        # Save the file
+        file.save(saved_filepath)
+        print(f"File saved to: {saved_filepath}")
+        
+        # Process the saved file
+        file.seek(0)  # Reset file pointer for processing
         spd = process_uploaded_file(file, spd_name, weight, normalize, photometer)
         print(f"SPD processed: {spd.name if spd else 'None'}")
         
@@ -492,6 +508,15 @@ def get_library_items():
         library_items = []
         csv_dir = 'CSVs'
         
+        # Ensure we're in the right directory
+        if not os.path.exists(csv_dir):
+            csv_dir = os.path.join('/app', 'CSVs')
+            if not os.path.exists(csv_dir):
+                print(f"ERROR: CSVs directory not found. CWD: {os.getcwd()}")
+                return jsonify({'error': 'CSVs directory not found', 'items': []}), 200
+        
+        print(f"Loading library from: {os.path.abspath(csv_dir)}, CWD: {os.getcwd()}")
+        
         # Walk through all subdirectories in CSVs folder
         for root, dirs, files in os.walk(csv_dir):
             for filename in files:
@@ -552,6 +577,51 @@ def get_library_item(filepath):
         else:
             return jsonify({'error': 'Could not parse SPD file'}), 400
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/library/rename', methods=['POST'])
+def rename_library_item():
+    """Rename a library item (CSV file)"""
+    try:
+        data = request.get_json()
+        old_filepath = data.get('filepath')
+        new_title = data.get('newTitle')
+        
+        if not old_filepath or not new_title:
+            return jsonify({'error': 'Missing filepath or newTitle'}), 400
+        
+        # Construct full paths
+        old_path = os.path.join('CSVs', old_filepath)
+        if not os.path.exists(old_path):
+            return jsonify({'error': 'File not found'}), 404
+        
+        # Generate new filename preserving directory structure
+        directory = os.path.dirname(old_path)
+        extension = os.path.splitext(old_path)[1]
+        safe_title = secure_filename(new_title).replace(' ', '_')
+        new_filename = f"{safe_title}{extension}"
+        new_path = os.path.join(directory, new_filename)
+        
+        # Check if new path already exists
+        if os.path.exists(new_path) and new_path != old_path:
+            return jsonify({'error': 'A file with that name already exists'}), 409
+        
+        # Rename the file
+        os.rename(old_path, new_path)
+        
+        # Return new filepath relative to CSVs folder
+        new_relative_path = os.path.relpath(new_path, 'CSVs')
+        
+        return jsonify({
+            'success': True,
+            'newFilepath': new_relative_path,
+            'newId': new_relative_path.replace(os.sep, '_').replace('.', '_')
+        })
+        
+    except Exception as e:
+        import traceback
+        print(f"Rename error: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 @app.route('/analyze', methods=['POST'])

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { AnalysisOptions } from "@/components/photometrics/analysis-options"
 import { ResultsDisplay } from "@/components/photometrics/results-display"
 import { useAnalysisStore, useLibraryStore } from "@/lib/store"

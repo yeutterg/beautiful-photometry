@@ -9,9 +9,10 @@ import { useLibraryStore } from "@/lib/store"
 
 interface UploadTabProps {
   dataType: string
+  onUploadComplete?: () => void
 }
 
-export function UploadTab({ dataType }: UploadTabProps) {
+export function UploadTab({ dataType, onUploadComplete }: UploadTabProps) {
   const { addItem } = useLibraryStore()
   
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -31,14 +32,16 @@ export function UploadTab({ dataType }: UploadTabProps) {
           toast.success(`Successfully imported ${file.name}`)
         }
         
-        // Refresh the page to reload library from filesystem
-        window.location.reload()
+        // Trigger refresh callback if provided
+        if (onUploadComplete) {
+          onUploadComplete()
+        }
       } catch (error) {
         console.error('Upload error:', error)
         toast.error(`Failed to upload ${file.name}`)
       }
     }
-  }, [addItem])
+  }, [addItem, onUploadComplete])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

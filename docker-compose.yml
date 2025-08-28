@@ -8,7 +8,7 @@ services:
     ports:
       - "5001:8080"
     volumes:
-      - ./backend/CSVs:/app/CSVs:ro
+      - ./backend/CSVs:/app/CSVs
       - ./backend/uploads:/app/uploads
       - ./backend/out:/app/out
     environment:
@@ -37,7 +37,7 @@ services:
   beautiful-photometry-cli:
     build: ./backend
     volumes:
-      - ./backend/CSVs:/app/CSVs:ro
+      - ./backend/CSVs:/app/CSVs
       - ./backend/out:/app/out
     environment:
       - PYTHONPATH=/app

@@ -11,9 +11,10 @@ import { useLibraryStore } from "@/lib/store"
 
 interface ManualEntryTabProps {
   dataType: string
+  onEntryComplete?: () => void
 }
 
-export function ManualEntryTab({ dataType }: ManualEntryTabProps) {
+export function ManualEntryTab({ dataType, onEntryComplete }: ManualEntryTabProps) {
   const [data, setData] = useState("")
   const [name, setName] = useState("")
   const { addItem } = useLibraryStore()
@@ -38,8 +39,10 @@ export function ManualEntryTab({ dataType }: ManualEntryTabProps) {
         setData("")
         setName("")
         
-        // Refresh the page to reload library from filesystem
-        window.location.reload()
+        // Trigger refresh callback if provided
+        if (onEntryComplete) {
+          onEntryComplete()
+        }
       } else {
         toast.error("Failed to import data")
       }

@@ -19,7 +19,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
-import { CalendarIcon } from "lucide-react"
+import { CalendarIcon, Pencil } from "lucide-react"
 import { format } from "date-fns"
 
 interface DataItem {
@@ -126,6 +126,7 @@ export function DataTable({
                   onRowClick(item)
                 }
               }}
+              className="relative group"
             >
               {editingId === item.id ? (
                 <Input
@@ -141,15 +142,28 @@ export function DataTable({
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : (
-                <span
-                  className="hover:bg-muted px-2 py-1 rounded"
-                  onDoubleClick={(e) => {
-                    e.stopPropagation()
-                    startEditing(item.id, item.title)
-                  }}
-                >
-                  {item.title}
-                </span>
+                <div className="flex items-center justify-between">
+                  <span
+                    className="flex-1 px-2 py-1 rounded"
+                    onDoubleClick={(e) => {
+                      e.stopPropagation()
+                      startEditing(item.id, item.title)
+                    }}
+                  >
+                    {item.title}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      startEditing(item.id, item.title)
+                    }}
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </Button>
+                </div>
               )}
             </TableCell>
             <TableCell

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { DataTable } from "./data-table"
 import { Button } from "@/components/ui/button"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Trash2, BarChart, RefreshCw } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -12,17 +13,20 @@ import { api } from "@/lib/api"
 export function DataLibrary() {
   const router = useRouter()
   const [selectedItems, setSelectedItems] = useState<string[]>([])
-  const [data, setData] = useState<Array<{
+  const [allData, setAllData] = useState<Array<{
     id: string
     title: string
     type: 'SPD'
     createdDate: Date
     data?: Record<string, number>
+    source?: string // 'examples' or 'user'
+    filepath?: string
   }>>([])
   const [loading, setLoading] = useState(true)
   const { setCurrentSPDs } = useAnalysisStore()
-  const { addItem, addItemWithId, items, clearItems } = useLibraryStore()
+  const { addItemWithId, items, clearItems } = useLibraryStore()
   const [forceRefresh, setForceRefresh] = useState(0)
+  const [activeTab, setActiveTab] = useState("all")
   
   // Load library items from API on mount (only if empty)
   useEffect(() => {
@@ -33,12 +37,15 @@ export function DataLibrary() {
         // Check if we already have items loaded and not forcing refresh
         if (items.length > 0 && forceRefresh === 0) {
           console.log('Using existing items from store:', items.length)
-          setData(items.filter(item => item.type === 'SPD').map(item => ({
+          setAllData(items.filter(item => item.type === 'SPD').map(item => ({
             id: item.id,
             title: item.title,
             type: 'SPD' as const,
             createdDate: item.createdDate,
-            data: item.data
+            data: item.data,
+            source: item.metadata?.filepath?.includes('examples') ? 'examples' : 
+                    item.metadata?.filepath?.includes('user') ? 'user' : 'other',
+            filepath: item.metadata?.filepath
           })))
           setLoading(false)
           return
@@ -58,7 +65,9 @@ export function DataLibrary() {
           createdDate: new Date(item.createdDate),
           data: item.data || {},
           filepath: item.filepath,
-          folder: item.folder
+          folder: item.folder,
+          source: item.filepath?.includes('examples') ? 'examples' : 
+                  item.filepath?.includes('user') ? 'user' : 'other'
         }))
         
         console.log('=== LOADING LIBRARY ITEMS FROM API ===')
@@ -86,7 +95,7 @@ export function DataLibrary() {
         
         // Sort items by ID for consistent ordering
         const sortedItems = [...formattedItems].sort((a, b) => a.id.localeCompare(b.id))
-        setData(sortedItems)
+        setAllData(sortedItems)
       } catch (error) {
         console.error('Failed to load library items:', error)
         toast.error('Failed to load library items')
@@ -101,6 +110,14 @@ export function DataLibrary() {
   
   // Don't sync automatically - we manage data state independently
   // This prevents conflicts between API-loaded items and store items
+  
+  // Filter data based on active tab
+  const filteredData = allData.filter(item => {
+    if (activeTab === 'all') return true
+    if (activeTab === 'examples') return item.source === 'examples'
+    if (activeTab === 'my-data') return item.source === 'user'
+    return true
+  })
 
   const handleSelectionChange = (selectedIds: string[]) => {
     setSelectedItems(selectedIds)
@@ -111,7 +128,7 @@ export function DataLibrary() {
     
     const confirmDelete = confirm(`Delete ${selectedItems.length} item(s)?`)
     if (confirmDelete) {
-      setData(data.filter(item => !selectedItems.includes(item.id)))
+      setAllData(allData.filter(item => !selectedItems.includes(item.id)))
       setSelectedItems([])
       toast.success(`Deleted ${selectedItems.length} item(s)`)
     }
@@ -120,7 +137,7 @@ export function DataLibrary() {
   const handleAnalyze = () => {
     if (selectedItems.length === 0) return
     
-    const selectedData = data.filter(item => selectedItems.includes(item.id))
+    const selectedData = filteredData.filter(item => selectedItems.includes(item.id))
     const hasFlicker = selectedData.some(item => item.type !== "SPD")
     
     if (hasFlicker) {
@@ -172,14 +189,44 @@ export function DataLibrary() {
     }
   }
 
-  const handleRename = (id: string, newTitle: string) => {
-    setData(data.map(item => 
-      item.id === id ? { ...item, title: newTitle } : item
-    ))
+  const handleRename = async (id: string, newTitle: string) => {
+    const item = allData.find(i => i.id === id)
+    if (!item || !item.filepath) {
+      toast.error("Cannot rename: item filepath not found")
+      return
+    }
+    
+    try {
+      const response = await api.renameLibraryItem(item.filepath, newTitle)
+      if (response.success && response.newFilepath && response.newId) {
+        // Update the item with new ID and filepath
+        setAllData(allData.map(i => 
+          i.id === id ? { 
+            ...i, 
+            id: response.newId as string,  // Type assertion since we checked it exists
+            title: newTitle,
+            filepath: response.newFilepath as string  // Type assertion since we checked it exists
+          } : i
+        ))
+        // Also update in store
+        const storeItem = items.find(i => i.id === id)
+        if (storeItem) {
+          // Remove old item and add with new ID
+          clearItems()
+          setForceRefresh(prev => prev + 1) // Force refresh to reload from API
+        }
+        toast.success("File renamed successfully")
+      } else {
+        toast.error(response.error || "Failed to rename file")
+      }
+    } catch (error) {
+      console.error("Rename error:", error)
+      toast.error("Failed to rename file")
+    }
   }
 
   const handleDateChange = (id: string, newDate: Date) => {
-    setData(data.map(item => 
+    setAllData(allData.map(item => 
       item.id === id ? { ...item, createdDate: newDate } : item
     ))
   }
@@ -220,14 +267,30 @@ export function DataLibrary() {
         </div>
       </div>
       
-      <DataTable
-        data={data}
-        selectedItems={selectedItems}
-        onSelectionChange={handleSelectionChange}
-        onRowClick={handleRowClick}
-        onRename={handleRename}
-        onDateChange={handleDateChange}
-      />
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3 mb-4">
+          <TabsTrigger value="all">
+            All ({allData.length})
+          </TabsTrigger>
+          <TabsTrigger value="examples">
+            Examples ({allData.filter(d => d.source === 'examples').length})
+          </TabsTrigger>
+          <TabsTrigger value="my-data">
+            My Data ({allData.filter(d => d.source === 'user').length})
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value={activeTab}>
+          <DataTable
+            data={filteredData}
+            selectedItems={selectedItems}
+            onSelectionChange={handleSelectionChange}
+            onRowClick={handleRowClick}
+            onRename={handleRename}
+            onDateChange={handleDateChange}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
