@@ -408,12 +408,16 @@ def compare_spectra():
             'spds': spds,
             'figsize': (12, 8),
             'suppress': True,
-            'title': data.get('title', 'Spectral Comparison'),
             'melanopic_curve': data.get('melanopic_curve', False),
             'hideyaxis': data.get('hideyaxis', False),
             'showlegend': data.get('showlegend', True),
             'legend_loc': data.get('legend_loc', 'upper left')
         }
+        
+        # Only add title if it's explicitly provided
+        title = data.get('title')
+        if title and title.strip():
+            plot_options['title'] = title
         
         plot_image = create_plot_image(plot_multi_spectrum, **plot_options)
         
@@ -506,8 +510,10 @@ def get_library_items():
                     try:
                         spd_data = load_spd_from_file(filepath)
                         if spd_data:
+                            item_id = rel_path.replace(os.sep, '_').replace('.', '_')
+                            print(f"Loading library item: {filename} -> ID: {item_id}, Path: {rel_path}")
                             library_items.append({
-                                'id': rel_path.replace(os.sep, '_').replace('.', '_'),
+                                'id': item_id,
                                 'title': os.path.splitext(filename)[0],
                                 'filepath': rel_path,
                                 'folder': os.path.dirname(rel_path) if os.path.dirname(rel_path) else 'root',
@@ -519,6 +525,11 @@ def get_library_items():
                         print(f"Error loading {filepath}: {str(e)}")
                         continue
         
+        # Sort items by filepath for consistent ordering
+        library_items.sort(key=lambda x: x['filepath'])
+        print(f"Returning {len(library_items)} library items")
+        for item in library_items[:5]:  # Log first 5 items for debugging
+            print(f"  - ID: {item['id']}, Title: {item['title']}, Path: {item['filepath']}")
         return jsonify({'items': library_items})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -607,17 +618,15 @@ def analyze_spd():
         # Get melanopic option from frontend
         show_melanopic = options.get('melanopic_curve', False)
         
-        # Get title from options, fallback to SPD name
+        # Get title from options - only use if explicitly provided and not empty
         chart_title = options.get('title')
-        if chart_title is None or chart_title == '':
-            chart_title = spd.name
+        print(f"DEBUG: chart_title from options: {repr(chart_title)}, type: {type(chart_title)}")
         
         # Create plot with options
         plot_options = {
             'spd': spd,
             'figsize': figsize,
             'suppress': True,
-            'title': chart_title,
             'show_legend': options.get('show_legend', True),
             'melanopic_curve': show_melanopic,
             'melanopic_stimulus': show_melanopic,
@@ -625,6 +634,14 @@ def analyze_spd():
             'xlim': xlim,
             'show_spectral_ranges': options.get('show_spectral_ranges', False)
         }
+        
+        # Only add title if it's explicitly provided and not empty
+        # Check for None, empty string, and the string "undefined"
+        if chart_title and chart_title not in [None, '', 'undefined'] and chart_title.strip():
+            plot_options['title'] = chart_title
+            print(f"DEBUG: Adding title to plot_options: {chart_title}")
+        else:
+            print(f"DEBUG: Not adding title to plot_options")
         
         # Use 100 DPI since we're controlling size via figsize
         try:

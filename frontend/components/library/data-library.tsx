@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { DataTable } from "./data-table"
 import { Button } from "@/components/ui/button"
-import { Trash2, BarChart } from "lucide-react"
+import { Trash2, BarChart, RefreshCw } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { useAnalysisStore, useLibraryStore } from "@/lib/store"
@@ -21,7 +21,8 @@ export function DataLibrary() {
   }>>([])
   const [loading, setLoading] = useState(true)
   const { setCurrentSPDs } = useAnalysisStore()
-  const { addItem, items } = useLibraryStore()
+  const { addItem, addItemWithId, items, clearItems } = useLibraryStore()
+  const [forceRefresh, setForceRefresh] = useState(0)
   
   // Load library items from API on mount (only if empty)
   useEffect(() => {
@@ -29,22 +30,23 @@ export function DataLibrary() {
       try {
         setLoading(true)
         
-        // If we already have items in the store, use them
-        if (items.length > 0) {
+        // Check if we already have items loaded and not forcing refresh
+        if (items.length > 0 && forceRefresh === 0) {
+          console.log('Using existing items from store:', items.length)
           setData(items.filter(item => item.type === 'SPD').map(item => ({
             id: item.id,
             title: item.title,
             type: 'SPD' as const,
             createdDate: item.createdDate,
-            data: item.data,
-            filepath: item.metadata?.filepath,
-            folder: item.metadata?.folder
+            data: item.data
           })))
           setLoading(false)
           return
         }
         
-        // Otherwise load from API
+        // Load from API
+        console.log('Loading from API (force refresh or empty store)')
+        clearItems() // Clear before loading to ensure clean state
         const response = await api.getLibraryItems()
         const libraryItems = response.items || []
         
@@ -59,9 +61,19 @@ export function DataLibrary() {
           folder: item.folder
         }))
         
-        // Add items to store and set local data
+        console.log('=== LOADING LIBRARY ITEMS FROM API ===')
+        console.log('Received items:', libraryItems.map(item => ({ 
+          id: item.id, 
+          title: item.title,
+          filepath: item.filepath,
+          hasData: !!item.data 
+        })))
+        
+        // Add items to store with their original IDs
         formattedItems.forEach(item => {
-          addItem({
+          console.log(`Adding to store: ID=${item.id}, Title=${item.title}`)
+          addItemWithId({
+            id: item.id,
             title: item.title,
             type: item.type,
             data: item.data || {},
@@ -72,7 +84,9 @@ export function DataLibrary() {
           })
         })
         
-        setData(formattedItems)
+        // Sort items by ID for consistent ordering
+        const sortedItems = [...formattedItems].sort((a, b) => a.id.localeCompare(b.id))
+        setData(sortedItems)
       } catch (error) {
         console.error('Failed to load library items:', error)
         toast.error('Failed to load library items')
@@ -83,20 +97,10 @@ export function DataLibrary() {
     
     loadLibraryItems()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [forceRefresh])
   
-  // Sync with library store changes
-  useEffect(() => {
-    if (!loading && items.length > 0) {
-      setData(items.filter(item => item.type === 'SPD').map(item => ({
-        id: item.id,
-        title: item.title,
-        type: 'SPD' as const,
-        createdDate: item.createdDate,
-        data: item.data
-      })))
-    }
-  }, [items, loading])
+  // Don't sync automatically - we manage data state independently
+  // This prevents conflicts between API-loaded items and store items
 
   const handleSelectionChange = (selectedIds: string[]) => {
     setSelectedItems(selectedIds)
@@ -133,11 +137,16 @@ export function DataLibrary() {
   const handleRowClick = (item: { id: string; title: string; type: string; createdDate: Date; data?: Record<string, number> }) => {
     if (item.type === "SPD") {
       console.log('Row clicked:', item)
+      console.log('Item ID:', item.id, 'Title:', item.title)
       console.log('SPD data available:', !!item.data, 'Data keys:', item.data ? Object.keys(item.data).length : 0)
+      
+      // Log all store items to debug
+      console.log('Store items:', items.map(i => ({ id: i.id, title: i.title })))
       
       // Ensure item is in the library store with the same ID
       const storeItem = items.find(i => i.id === item.id)
       if (!storeItem) {
+        console.log('WARNING: Item not found in store by ID:', item.id)
         console.log('Item not in store, checking by title...')
         // Try to find by title as fallback
         const titleMatch = items.find(i => i.title === item.title)
@@ -148,8 +157,12 @@ export function DataLibrary() {
           toast.success(`Loaded ${item.title} for analysis`)
           return
         }
+        console.log('ERROR: Item not found in store at all')
+        toast.error(`Could not find ${item.title} in library`)
+        return
       }
       
+      console.log('Found in store, setting current SPD to:', item.id)
       // Load single SPD into analysis store  
       setCurrentSPDs([item.id])
       router.push("/photometrics")
@@ -175,6 +188,16 @@ export function DataLibrary() {
     <div className="border rounded-lg p-6 bg-card">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold">Data Library</h2>
+        <div className="flex gap-2 items-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setForceRefresh(prev => prev + 1)}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         {selectedItems.length > 0 && (
           <div className="flex gap-2">
             <Button 
@@ -194,6 +217,7 @@ export function DataLibrary() {
             </Button>
           </div>
         )}
+        </div>
       </div>
       
       <DataTable

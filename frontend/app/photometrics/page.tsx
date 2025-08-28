@@ -42,8 +42,10 @@ export default function PhotometricsPage() {
     try {
       // Get SPD data from library
       const spds = currentSPDs.map(id => getItem(id)).filter(Boolean)
+      console.log('=== PHOTOMETRICS ANALYSIS ===')
       console.log('Current SPD IDs:', currentSPDs)
-      console.log('Retrieved SPDs:', spds)
+      console.log('Retrieved SPDs:', spds.map(s => ({ id: s?.id, title: s?.title })))
+      console.log('Full SPD details:', spds)
       if (spds.length === 0) {
         console.log('No SPDs found in library')
         setIsLoading(false)
