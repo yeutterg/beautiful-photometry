@@ -19,6 +19,16 @@ services:
     networks:
       - app-network
 
+  # TypeScript backend service for metrics
+  ts-backend:
+    build: ./ts-backend
+    container_name: beautiful-photometry-ts-backend
+    ports:
+      - "8081:8081"
+    restart: unless-stopped
+    networks:
+      - app-network
+
   # Frontend Next.js service
   frontend:
     build: ./frontend
@@ -27,8 +37,10 @@ services:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://backend:8080
+      - NEXT_PUBLIC_TS_API_URL=http://ts-backend:8081
     depends_on:
       - backend
+      - ts-backend
     restart: unless-stopped
     networks:
       - app-network

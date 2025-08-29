@@ -12,11 +12,83 @@ import {
 } from "@/components/ui/table"
 import { Download, Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import { useAnalysisStore } from "@/lib/store"
+import { useAnalysisStore, useLibraryStore } from "@/lib/store"
+import { api } from "@/lib/api"
 import Image from "next/image"
+
+import { useEffect, useState } from "react"
+
+interface MetricsData {
+  id: string
+  name: string
+  metrics: {
+    name: string
+    cct?: number | string
+    duv?: number
+    cri?: number
+    r9?: number
+    rf?: number
+    rg?: number
+    melanopicRatio?: number
+    melanopicResponse?: number
+    scotopicPhotopicRatio?: number
+    melanopicPhotopicRatio?: number
+    bluePercentage?: number
+    peakWavelength?: number
+    dominantWavelength?: number
+  }
+}
 
 export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
   const { results, currentSPDs } = useAnalysisStore()
+  const { getItem } = useLibraryStore()
+  const [metricsData, setMetricsData] = useState<MetricsData[]>([])
+  const [metricsLoading, setMetricsLoading] = useState(false)
+  
+  // Fetch metrics when SPDs change
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      if (currentSPDs.length === 0) {
+        setMetricsData([])
+        return
+      }
+      
+      setMetricsLoading(true)
+      try {
+        // Get SPD data from library
+        const spds = currentSPDs
+          .map(id => getItem(id))
+          .filter(Boolean)
+          .map(item => ({
+            id: item!.id,
+            name: item!.title,
+            data: item!.data
+          }))
+        
+        if (spds.length === 0) {
+          setMetricsData([])
+          return
+        }
+        
+        // Fetch metrics from TypeScript backend
+        const response = await api.calculateMetrics(spds)
+        
+        if (response.success && response.results) {
+          setMetricsData(response.results)
+        } else {
+          console.error('Failed to fetch metrics:', response.error)
+          setMetricsData([])
+        }
+      } catch (error) {
+        console.error('Error fetching metrics:', error)
+        setMetricsData([])
+      } finally {
+        setMetricsLoading(false)
+      }
+    }
+    
+    fetchMetrics()
+  }, [currentSPDs, getItem])
   
   const handleExportChart = async () => {
     if (!results?.chart) {
@@ -53,24 +125,30 @@ export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
   }
 
   const handleExportData = () => {
-    if (!results?.metrics) {
+    if (metricsData.length === 0) {
       toast.error("No metrics available to export")
       return
     }
     
     try {
       // Convert metrics to CSV format
-      const csvContent = [
-        ['Metric', 'Value'],
-        ['CCT', results.metrics.cct || 'N/A'],
-        ['CRI Ra', results.metrics.cri || 'N/A'],
-        ['Rf (Fidelity)', results.metrics.rf || 'N/A'],
-        ['Rg (Gamut)', results.metrics.rg || 'N/A'],
-        ['Melanopic Ratio', results.metrics.melanopicRatio || 'N/A'],
-        ['S/P Ratio', results.metrics.spRatio || 'N/A'],
-        ['M/P Ratio', results.metrics.mpRatio || 'N/A'],
-        ['Blue Percentage', results.metrics.bluePercentage || 'N/A']
-      ].map(row => row.join(',')).join('\n')
+      const headers = ['Metric', ...metricsData.map(spd => spd.name)]
+      const rows = [
+        ['CCT', ...metricsData.map(spd => spd.metrics.cct || 'N/A')],
+        ['Duv', ...metricsData.map(spd => spd.metrics.duv !== undefined ? spd.metrics.duv.toFixed(4) : 'N/A')],
+        ['CRI Ra', ...metricsData.map(spd => spd.metrics.cri !== undefined ? Math.round(spd.metrics.cri).toString() : 'N/A')],
+        ['R9', ...metricsData.map(spd => spd.metrics.r9 !== undefined ? Math.round(spd.metrics.r9).toString() : 'N/A')],
+        ['Rf (Fidelity)', ...metricsData.map(spd => spd.metrics.rf !== undefined ? Math.round(spd.metrics.rf).toString() : 'N/A')],
+        ['Rg (Gamut)', ...metricsData.map(spd => spd.metrics.rg !== undefined ? Math.round(spd.metrics.rg).toString() : 'N/A')],
+        ['Melanopic Ratio', ...metricsData.map(spd => spd.metrics.melanopicRatio !== undefined ? spd.metrics.melanopicRatio.toFixed(3) : 'N/A')],
+        ['S/P Ratio', ...metricsData.map(spd => spd.metrics.scotopicPhotopicRatio !== undefined ? spd.metrics.scotopicPhotopicRatio.toFixed(3) : 'N/A')],
+        ['M/P Ratio', ...metricsData.map(spd => spd.metrics.melanopicPhotopicRatio !== undefined ? spd.metrics.melanopicPhotopicRatio.toFixed(3) : 'N/A')],
+        ['Blue %', ...metricsData.map(spd => spd.metrics.bluePercentage !== undefined ? `${spd.metrics.bluePercentage.toFixed(1)}%` : 'N/A')],
+        ['Peak Wavelength', ...metricsData.map(spd => spd.metrics.peakWavelength !== undefined ? `${Math.round(spd.metrics.peakWavelength)}nm` : 'N/A')],
+        ['Dominant Wavelength', ...metricsData.map(spd => spd.metrics.dominantWavelength !== undefined ? `${Math.round(spd.metrics.dominantWavelength)}nm` : 'N/A')]
+      ]
+      
+      const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n')
       
       // Create download link
       const blob = new Blob([csvContent], { type: 'text/csv' })
@@ -89,20 +167,6 @@ export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
       toast.error("Failed to export metrics")
     }
   }
-
-  // Mock metrics data
-  const metrics = [
-    { name: "CCT", label: "Correlated Color Temperature", value: "3000K" },
-    { name: "CRI Ra", label: "Color Rendering Index", value: "95" },
-    { name: "R9", label: "Red color rendering", value: "92" },
-    { name: "Rf", label: "Fidelity Index", value: "93" },
-    { name: "Rg", label: "Gamut Index", value: "105" },
-    { name: "Peak", label: "Peak Wavelength", value: "450nm" },
-    { name: "M/P", label: "M/P Ratio (Melanopic/Photopic)", value: "0.65" },
-    { name: "S/P", label: "S/P Ratio (Scotopic/Photopic)", value: "0.72" },
-    { name: "Mel", label: "Melanopic Ratio", value: "0.45" },
-    { name: "Blue %", label: "% Blue Light", value: "18%" },
-  ]
 
   return (
     <div className="space-y-6">
@@ -175,42 +239,119 @@ export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
                 <p className="text-muted-foreground text-sm">Loading metrics...</p>
               </div>
             </div>
-          ) : results?.metrics ? (
+          ) : metricsData.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="font-semibold">Metric</TableHead>
-                  <TableHead>Value</TableHead>
+                  {metricsData.map((spd) => (
+                    <TableHead key={spd.id}>{spd.name}</TableHead>
+                  ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {Object.entries(results.metrics).map(([key, value]) => (
-                  <TableRow key={key}>
-                    <TableCell className="font-medium capitalize">
-                      {key.replace(/([A-Z])/g, ' $1').trim()}
+                <TableRow>
+                  <TableCell className="font-medium">CCT</TableCell>
+                  {metricsData.map((spd) => (
+                    <TableCell key={spd.id}>
+                      {spd.metrics.cct || '-'}
                     </TableCell>
-                    <TableCell>{value}</TableCell>
-                  </TableRow>
-                ))}
+                  ))}
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Duv</TableCell>
+                  {metricsData.map((spd) => (
+                    <TableCell key={spd.id}>
+                      {spd.metrics.duv !== undefined ? spd.metrics.duv.toFixed(4) : '-'}
+                    </TableCell>
+                  ))}
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">CRI Ra</TableCell>
+                  {metricsData.map((spd) => (
+                    <TableCell key={spd.id}>
+                      {spd.metrics.cri !== undefined ? Math.round(spd.metrics.cri) : '-'}
+                    </TableCell>
+                  ))}
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">R9</TableCell>
+                  {metricsData.map((spd) => (
+                    <TableCell key={spd.id}>
+                      {spd.metrics.r9 !== undefined ? Math.round(spd.metrics.r9) : '-'}
+                    </TableCell>
+                  ))}
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Rf (Fidelity)</TableCell>
+                  {metricsData.map((spd) => (
+                    <TableCell key={spd.id}>
+                      {spd.metrics.rf !== undefined ? Math.round(spd.metrics.rf) : '-'}
+                    </TableCell>
+                  ))}
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Rg (Gamut)</TableCell>
+                  {metricsData.map((spd) => (
+                    <TableCell key={spd.id}>
+                      {spd.metrics.rg !== undefined ? Math.round(spd.metrics.rg) : '-'}
+                    </TableCell>
+                  ))}
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Melanopic Ratio</TableCell>
+                  {metricsData.map((spd) => (
+                    <TableCell key={spd.id}>
+                      {spd.metrics.melanopicRatio !== undefined ? spd.metrics.melanopicRatio.toFixed(3) : '-'}
+                    </TableCell>
+                  ))}
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">S/P Ratio</TableCell>
+                  {metricsData.map((spd) => (
+                    <TableCell key={spd.id}>
+                      {spd.metrics.scotopicPhotopicRatio !== undefined ? spd.metrics.scotopicPhotopicRatio.toFixed(3) : '-'}
+                    </TableCell>
+                  ))}
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">M/P Ratio</TableCell>
+                  {metricsData.map((spd) => (
+                    <TableCell key={spd.id}>
+                      {spd.metrics.melanopicPhotopicRatio !== undefined ? spd.metrics.melanopicPhotopicRatio.toFixed(3) : '-'}
+                    </TableCell>
+                  ))}
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Blue %</TableCell>
+                  {metricsData.map((spd) => (
+                    <TableCell key={spd.id}>
+                      {spd.metrics.bluePercentage !== undefined ? `${spd.metrics.bluePercentage.toFixed(1)}%` : '-'}
+                    </TableCell>
+                  ))}
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Peak Wavelength</TableCell>
+                  {metricsData.map((spd) => (
+                    <TableCell key={spd.id}>
+                      {spd.metrics.peakWavelength !== undefined ? `${Math.round(spd.metrics.peakWavelength)}nm` : '-'}
+                    </TableCell>
+                  ))}
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Dominant Wavelength</TableCell>
+                  {metricsData.map((spd) => (
+                    <TableCell key={spd.id}>
+                      {spd.metrics.dominantWavelength !== undefined ? `${Math.round(spd.metrics.dominantWavelength)}nm` : '-'}
+                    </TableCell>
+                  ))}
+                </TableRow>
               </TableBody>
             </Table>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="font-semibold">Metric</TableHead>
-                  <TableHead>SPD 1</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {metrics.map((metric) => (
-                  <TableRow key={metric.name}>
-                    <TableCell className="font-medium">{metric.label}</TableCell>
-                    <TableCell>{metric.value}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="text-center py-8 text-muted-foreground">
+              {currentSPDs.length > 0 ? "Loading metrics..." : "Select SPDs from the library to analyze"}
+            </div>
           )}
         </div>
       </Card>
