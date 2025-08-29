@@ -408,8 +408,11 @@ def plot_multi_spectrum(
         # generate the color spectrum
         spectralmap = generate_color_spectrum(xlim)
 
+        # Set y-axis limits BEFORE showing the image
+        ax1.set_ylim(0.0, 1.0)
+        
         # show the image and hide the left axis
-        plt.imshow(X, clim=xlim,  extent=extent, cmap=spectralmap, aspect='auto')
+        ax1.imshow(X, clim=xlim,  extent=extent, cmap=spectralmap, aspect='auto')
         ax1.spines['left'].set_color('none')
         ax1.spines['top'].set_color('none')
         ax1.spines['right'].set_color('none')
@@ -417,7 +420,6 @@ def plot_multi_spectrum(
         # ax1.spines['bottom'].set_smart_bounds(True)
         ax1.yaxis.set_visible(False)
         ax1.tick_params(top=False, left=False, right=False, bottom=True)
-        ax1.set_ylim(-0.5,1)
 
     # get the SPD values and plot
     legend_vals = []
@@ -457,8 +459,12 @@ def plot_multi_spectrum(
         ax0.spines['left'].set_color('none')
         ax0.yaxis.set_visible(False)
     else:
-        plt.yticks(np.arange(0.0, np.max(values)+ytick, ytick))
+        # Set y-axis ticks and limits
+        ax0.set_ylim(0.0, 1.0)
+        ax0.set_yticks(np.arange(0.0, 1.1, ytick))
         ax0.set_ylabel(ylabel)
+        # Make the y-axis spine stop exactly at 0.0 and 1.0
+        ax0.spines['left'].set_bounds(0.0, 1.0)
 
     # show title
     if title:
