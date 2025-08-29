@@ -9,14 +9,11 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-  SidebarMenuSubButton,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarGroupContent,
 } from "@/components/ui/sidebar"
-import { Library, LineChart, Activity, Sun, Zap } from "lucide-react"
+import { Library, LineChart, Activity, Sun } from "lucide-react"
 
 export function AppSidebar() {
   const pathname = usePathname()

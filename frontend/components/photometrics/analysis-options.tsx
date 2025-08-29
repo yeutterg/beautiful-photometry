@@ -12,20 +12,37 @@ import { useAnalysisStore } from "@/lib/store"
 export function AnalysisOptions() {
   const { analysisOptions, updateOptions } = useAnalysisStore()
   
-  // Local state for numeric inputs to prevent updates on every keystroke
+  // Local state for inputs to prevent updates on every keystroke
   const [localValues, setLocalValues] = useState({
     minWavelength: analysisOptions.minWavelength,
     maxWavelength: analysisOptions.maxWavelength,
     chartWidth: analysisOptions.chartWidth,
-    chartHeight: analysisOptions.chartHeight
+    chartHeight: analysisOptions.chartHeight,
+    chartTitle: analysisOptions.chartTitle,
+    spdLineColor: analysisOptions.spdLineColor
   })
   
   const handleNumericChange = (field: keyof typeof localValues, value: number) => {
     setLocalValues(prev => ({ ...prev, [field]: value }))
   }
   
+  const handleTextChange = (field: keyof typeof localValues, value: string) => {
+    setLocalValues(prev => ({ ...prev, [field]: value }))
+  }
+  
   const handleNumericBlur = (field: keyof typeof localValues) => {
     updateOptions({ [field]: localValues[field] })
+  }
+  
+  const handleTextBlur = (field: keyof typeof localValues) => {
+    updateOptions({ [field]: localValues[field] })
+  }
+  
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>, field: keyof typeof localValues) => {
+    if (e.key === 'Enter') {
+      updateOptions({ [field]: localValues[field] })
+      e.currentTarget.blur()
+    }
   }
 
   // Remove automatic trigger on mount to prevent double rendering
@@ -36,10 +53,13 @@ export function AnalysisOptions() {
       minWavelength: analysisOptions.minWavelength,
       maxWavelength: analysisOptions.maxWavelength,
       chartWidth: analysisOptions.chartWidth,
-      chartHeight: analysisOptions.chartHeight
+      chartHeight: analysisOptions.chartHeight,
+      chartTitle: analysisOptions.chartTitle,
+      spdLineColor: analysisOptions.spdLineColor
     })
   }, [analysisOptions.minWavelength, analysisOptions.maxWavelength, 
-      analysisOptions.chartWidth, analysisOptions.chartHeight])
+      analysisOptions.chartWidth, analysisOptions.chartHeight,
+      analysisOptions.chartTitle, analysisOptions.spdLineColor])
 
   return (
     <div className="space-y-6">
@@ -59,8 +79,10 @@ export function AnalysisOptions() {
             <Input 
               placeholder="Enter title" 
               className="w-full"
-              value={analysisOptions.chartTitle}
-              onChange={(e) => updateOptions({ chartTitle: e.target.value })}
+              value={localValues.chartTitle}
+              onChange={(e) => handleTextChange('chartTitle', e.target.value)}
+              onBlur={() => handleTextBlur('chartTitle')}
+              onKeyPress={(e) => handleKeyPress(e, 'chartTitle')}
               disabled={!analysisOptions.showTitle}
             />
           </div>
@@ -115,6 +137,7 @@ export function AnalysisOptions() {
               value={localValues.minWavelength}
               onChange={(e) => handleNumericChange('minWavelength', parseInt(e.target.value) || 380)}
               onBlur={() => handleNumericBlur('minWavelength')}
+              onKeyPress={(e) => handleKeyPress(e, 'minWavelength')}
             />
           </div>
           <div>
@@ -125,6 +148,7 @@ export function AnalysisOptions() {
               value={localValues.maxWavelength}
               onChange={(e) => handleNumericChange('maxWavelength', parseInt(e.target.value) || 780)}
               onBlur={() => handleNumericBlur('maxWavelength')}
+              onKeyPress={(e) => handleKeyPress(e, 'maxWavelength')}
             />
           </div>
         </div>
@@ -190,8 +214,10 @@ export function AnalysisOptions() {
               />
               <Input
                 type="text"
-                value={analysisOptions.spdLineColor}
-                onChange={(e) => updateOptions({ spdLineColor: e.target.value })}
+                value={localValues.spdLineColor}
+                onChange={(e) => handleTextChange('spdLineColor', e.target.value)}
+                onBlur={() => handleTextBlur('spdLineColor')}
+                onKeyPress={(e) => handleKeyPress(e, 'spdLineColor')}
                 className="flex-1"
                 disabled={!analysisOptions.showSpdLine}
                 placeholder="#000000"
@@ -208,7 +234,12 @@ export function AnalysisOptions() {
                 max="4"
                 step="0.25"
                 value={analysisOptions.spdLineWeight}
-                onChange={(e) => updateOptions({ spdLineWeight: parseFloat(e.target.value) || 2 })}
+                onChange={(e) => updateOptions({ spdLineWeight: parseFloat(e.target.value) || 0.5 })}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.currentTarget.blur()
+                  }
+                }}
                 disabled={!analysisOptions.showSpdLine}
                 className="w-20"
               />
@@ -240,6 +271,7 @@ export function AnalysisOptions() {
               value={localValues.chartWidth}
               onChange={(e) => handleNumericChange('chartWidth', parseInt(e.target.value) || 800)}
               onBlur={() => handleNumericBlur('chartWidth')}
+              onKeyPress={(e) => handleKeyPress(e, 'chartWidth')}
             />
           </div>
           <div>
@@ -250,6 +282,7 @@ export function AnalysisOptions() {
               value={localValues.chartHeight}
               onChange={(e) => handleNumericChange('chartHeight', parseInt(e.target.value) || 400)}
               onBlur={() => handleNumericBlur('chartHeight')}
+              onKeyPress={(e) => handleKeyPress(e, 'chartHeight')}
             />
           </div>
         </div>
