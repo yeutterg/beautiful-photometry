@@ -256,8 +256,11 @@ def plot_spectrum(
 
     # Set x-axis limits
     plt.xlim(xlim)
-    # Y-axis from 0 to y_max (which is already calculated above)
-    plt.ylim(0, y_max)
+    # Y-axis from 0 to y_max with small margin to prevent clipping for normalized data
+    if 0.95 <= y_max <= 1.05:
+        plt.ylim(-0.01, 1.02)
+    else:
+        plt.ylim(0, y_max)
 
     # Set the axis ticks dynamically based on range
     x_range = xlim[1] - xlim[0]
@@ -289,6 +292,9 @@ def plot_spectrum(
         plt.gca().axes.get_yaxis().set_visible(False)
     else:
         plt.yticks(np.arange(0.0, np.max(values)+ytick, ytick))
+        # If data appears normalized, make the y-axis spine stop exactly at 0.0 and 1.0
+        if 0.95 <= y_max <= 1.05:
+            ax.spines['left'].set_bounds(0.0, 1.0)
 
     # change the style of the axis spines
     ax.spines['top'].set_color('none')
@@ -459,8 +465,8 @@ def plot_multi_spectrum(
         ax0.spines['left'].set_color('none')
         ax0.yaxis.set_visible(False)
     else:
-        # Set y-axis ticks and limits
-        ax0.set_ylim(0.0, 1.0)
+        # Set y-axis ticks and limits with small margin to prevent clipping
+        ax0.set_ylim(-0.01, 1.02)
         ax0.set_yticks(np.arange(0.0, 1.1, ytick))
         ax0.set_ylabel(ylabel)
         # Make the y-axis spine stop exactly at 0.0 and 1.0
