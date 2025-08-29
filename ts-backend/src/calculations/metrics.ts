@@ -1,5 +1,6 @@
 import { SpectralData, Metrics } from '../types/spectrum';
 import { CIE_X, CIE_Y, CIE_Z, V_LAMBDA, V_PRIME_LAMBDA, MELANOPIC } from '../data/cie-data';
+import { calculateCRICIE } from './cri-cie';
 
 // Helper function to interpolate SPD to standard wavelengths
 export function interpolateSPD(spd: SpectralData, targetWavelengths: number[]): number[] {
@@ -242,13 +243,15 @@ export function calculateDominantWavelength(spd: SpectralData): number {
 export function calculateAllMetrics(name: string, spd: SpectralData): Metrics {
   try {
     const cct = calculateCCT(spd);
+    const criResults = calculateCRICIE(spd);
     
     return {
       name,
       cct: isNaN(cct) || cct < 1000 || cct > 20000 ? 'N/A' : `${cct}K`,
       duv: calculateDuv(spd),
-      cri: undefined, // CRI calculation not yet implemented - requires reference illuminants
-      r9: undefined, // R9 calculation not yet implemented - requires test color samples
+      cri: criResults.Ra,
+      criValues: criResults,
+      r9: criResults.R9,
       rf: undefined, // TM-30 Rf not yet implemented
       rg: undefined, // TM-30 Rg not yet implemented
       melanopicRatio: calculateMelanopicRatio(spd),
@@ -266,6 +269,7 @@ export function calculateAllMetrics(name: string, spd: SpectralData): Metrics {
       cct: 'Error',
       duv: undefined,
       cri: undefined,
+      criValues: undefined,
       r9: undefined,
       rf: undefined,
       rg: undefined

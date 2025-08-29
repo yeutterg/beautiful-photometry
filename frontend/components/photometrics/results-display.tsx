@@ -71,9 +71,12 @@ export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
         }
         
         // Fetch metrics from TypeScript backend
+        console.log('Sending SPDs to metrics API:', spds)
         const response = await api.calculateMetrics(spds)
+        console.log('Metrics API response:', response)
         
         if (response.success && response.results) {
+          console.log('Setting metrics data:', response.results)
           setMetricsData(response.results)
         } else {
           console.error('Failed to fetch metrics:', response.error)

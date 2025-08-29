@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { PageTitle } from "@/components/layout/page-title";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -32,7 +33,8 @@ export default function RootLayout({
             <div className="flex h-screen w-full">
               <AppSidebar />
               <div className="flex-1 flex flex-col">
-                <header className="flex items-center justify-end border-b px-6 py-3">
+                <header className="flex items-center justify-between border-b px-6 py-3">
+                  <PageTitle />
                   <ThemeToggle />
                 </header>
                 <main className="flex-1 overflow-y-auto">

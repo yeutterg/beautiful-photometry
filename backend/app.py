@@ -30,8 +30,8 @@ app.config['SECRET_KEY'] = 'your-secret-key-here'
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-# Enable CORS for all routes
-CORS(app, origins=['http://localhost:3000', 'http://frontend:3000'])
+# Enable CORS for all routes (including development ports)
+CORS(app, origins=['http://localhost:3000', 'http://localhost:3001', 'http://frontend:3000'])
 
 # Ensure upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)

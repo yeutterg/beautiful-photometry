@@ -30,7 +30,7 @@ export default function PhotometricsPage() {
   const { getItem } = useLibraryStore()
   
   // Debounce the analysis options to prevent rapid re-renders
-  const debouncedOptions = useDebounce(analysisOptions, 300)
+  const debouncedOptions = useDebounce(analysisOptions, 500) // Increased debounce time
 
   const analyzeData = useCallback(async () => {
     if (currentSPDs.length === 0) {
@@ -111,6 +111,23 @@ export default function PhotometricsPage() {
       analyzeData()
     }
   }, [currentSPDs, debouncedOptions, analyzeData])
+  // Show a message if no SPDs are selected
+  if (currentSPDs.length === 0) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold mb-4">No SPDs Selected</h2>
+          <p className="text-muted-foreground mb-6">
+            Please select SPDs from the library to analyze
+          </p>
+          <a href="/library" className="text-primary hover:underline">
+            Go to Library →
+          </a>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-full">
       {/* Left Panel - Options */}

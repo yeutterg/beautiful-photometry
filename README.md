@@ -65,12 +65,29 @@ chmod +x quick_start.sh
 ### Option 2: Docker
 
 ```bash
-# Start web interface
+# Start all services
 docker-compose up
+
+# Run in background
+docker-compose up -d
+
+# Stop services
+docker-compose down
+
+# Rebuild after code changes
+docker-compose up --build
 
 # Run CLI
 docker-compose --profile cli run --rm beautiful-photometry-cli --help
 ```
+
+**Access URLs:**
+- Frontend: http://localhost:3000
+- Backend API (Flask): http://localhost:5001
+- TypeScript Backend API: http://localhost:8081
+- Health check endpoint: http://localhost:8081/health
+
+**Note:** When you make code changes, you'll need to rebuild the containers with `docker-compose up --build`
 
 ### Option 3: Manual Installation
 

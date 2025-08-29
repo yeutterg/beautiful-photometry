@@ -146,7 +146,7 @@ export function DataLibrary() {
       // Load selected SPDs into analysis store
       const spdIds = selectedData.filter(item => item.type === "SPD").map(item => item.id)
       setCurrentSPDs(spdIds)
-      router.push("/photometrics")
+      router.push("/spd")
       toast.success(`Loaded ${spdIds.length} SPD(s) for analysis`)
     }
   }
@@ -170,7 +170,7 @@ export function DataLibrary() {
         if (titleMatch) {
           console.log('Found by title, using ID:', titleMatch.id)
           setCurrentSPDs([titleMatch.id])
-          router.push("/photometrics")
+          router.push("/spd")
           toast.success(`Loaded ${item.title} for analysis`)
           return
         }
@@ -182,7 +182,7 @@ export function DataLibrary() {
       console.log('Found in store, setting current SPD to:', item.id)
       // Load single SPD into analysis store  
       setCurrentSPDs([item.id])
-      router.push("/photometrics")
+      router.push("/spd")
       toast.success(`Loaded ${item.title} for analysis`)
     } else if (item.type === "Flicker") {
       router.push("/flicker")
