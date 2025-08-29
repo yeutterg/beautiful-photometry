@@ -419,15 +419,26 @@ def compare_spectra():
         if len(spds) < 2:
             return jsonify({'error': 'Could not process enough spectra for comparison'}), 400
         
+        # Get plot dimensions from options (convert pixels to inches at 100 DPI)
+        width_px = int(data.get('chart_width', 1000))
+        height_px = int(data.get('chart_height', 600))
+        figsize = (width_px / 100, height_px / 100)
+        
+        # Get SPD line options
+        show_spd_line = data.get('show_spd_line', True)
+        spd_line_color = data.get('spd_line_color', '#000000')
+        spd_line_weight = float(data.get('spd_line_weight', 0.5))
+        
         # Create comparison plot
         plot_options = {
             'spds': spds,
-            'figsize': (12, 8),
+            'figsize': figsize,
             'suppress': True,
             'melanopic_curve': data.get('melanopic_curve', False),
             'hideyaxis': data.get('hideyaxis', False),
-            'showlegend': data.get('showlegend', True),
-            'legend_loc': data.get('legend_loc', 'upper left')
+            'showlegend': data.get('show_legend', True),
+            'legend_loc': data.get('legend_loc', 'upper left'),
+            'line_weight': spd_line_weight
         }
         
         # Only add title if it's explicitly provided

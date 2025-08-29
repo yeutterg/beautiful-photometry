@@ -59,6 +59,7 @@ export default function PhotometricsPage() {
         melanopic_stimulus: false,
         hideyaxis: debouncedOptions.hideYAxis,
         show_legend: debouncedOptions.showLegend,
+        legend_loc: debouncedOptions.legendPosition === 'top left' ? 'upper left' : 'upper right',
         show_spectral_ranges: debouncedOptions.showSpectralRanges,
         x_min: debouncedOptions.minWavelength,
         x_max: debouncedOptions.maxWavelength,

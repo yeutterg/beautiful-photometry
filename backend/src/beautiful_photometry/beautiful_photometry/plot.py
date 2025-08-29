@@ -389,7 +389,7 @@ Plots multiple SPDs
 def plot_multi_spectrum(
         spds, figsize=(8,4), filename=None, ylabel='Intensity', hideyaxis=False, suppress=False, title=None,
         xlim=(360,780), xtick=30, ytick=0.2, melanopic_curve=False,
-        colorbar=True, showlegend=True, legend_loc='upper left'
+        colorbar=True, showlegend=True, legend_loc='upper left', line_weight=0.5
     ):
     # TODO fix non-colorbar display
 
@@ -439,7 +439,7 @@ def plot_multi_spectrum(
             values = values[arr_start:arr_end+1]
 
         legend_vals.append(spd.name)
-        ax0.plot(wavelengths, values)
+        ax0.plot(wavelengths, values, linewidth=line_weight)
 
     # show the legend
     if showlegend:

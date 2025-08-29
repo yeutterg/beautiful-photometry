@@ -9,22 +9,14 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
 } from "@/components/ui/sidebar"
-
-const navItems = [
-  {
-    href: "/library",
-    label: "Library",
-  },
-  {
-    href: "/photometrics",
-    label: "Photometrics",
-  },
-  {
-    href: "/flicker",
-    label: "Flicker",
-  },
-]
+import { Library, LineChart, Activity, Sun, Zap } from "lucide-react"
 
 export function AppSidebar() {
   const pathname = usePathname()
@@ -35,21 +27,65 @@ export function AppSidebar() {
         <h1 className="text-xl">Beautiful Photometry</h1>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarMenu>
-          {navItems.map((item) => {
-            const isActive = pathname === item.href || 
-                           (pathname === "/" && item.href === "/library")
-            return (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton asChild isActive={isActive}>
-                  <Link href={item.href}>
-                    <span>{item.label}</span>
+        {/* Library Section */}
+        <SidebarGroup>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={pathname === "/library" || pathname === "/"}>
+                <Link href="/library">
+                  <Library className="h-4 w-4" />
+                  <span>Library</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+
+        {/* Photometrics Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel>
+            Photometrics
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === "/photometrics"}>
+                  <Link href="/photometrics">
+                    <LineChart className="h-4 w-4" />
+                    <span>Spectral Power Distribution</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-            )
-          })}
-        </SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === "/tm30"}>
+                  <Link href="/tm30">
+                    <Sun className="h-4 w-4" />
+                    <span>TM-30</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Temporal Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel>
+            Temporal
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === "/flicker"}>
+                  <Link href="/flicker">
+                    <Activity className="h-4 w-4" />
+                    <span>Flicker</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
     </Sidebar>
   )

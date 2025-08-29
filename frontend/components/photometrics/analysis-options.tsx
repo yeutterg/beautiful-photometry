@@ -5,6 +5,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
+import { Slider } from "@/components/ui/slider"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAnalysisStore } from "@/lib/store"
 
 export function AnalysisOptions() {
@@ -45,28 +47,48 @@ export function AnalysisOptions() {
       <div>
         <h3 className="font-medium mb-3 text-base text-primary">Chart Configuration</h3>
         <div className="space-y-3">
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="show-title" 
-              checked={analysisOptions.showTitle}
-              onCheckedChange={(checked) => updateOptions({ showTitle: checked as boolean })}
-            />
-            <Label htmlFor="show-title" className="font-normal">Chart Title:</Label>
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="show-title" 
+                checked={analysisOptions.showTitle}
+                onCheckedChange={(checked) => updateOptions({ showTitle: checked as boolean })}
+              />
+              <Label htmlFor="show-title" className="font-normal">Chart Title</Label>
+            </div>
             <Input 
               placeholder="Enter title" 
-              className="flex-1"
+              className="w-full"
               value={analysisOptions.chartTitle}
               onChange={(e) => updateOptions({ chartTitle: e.target.value })}
               disabled={!analysisOptions.showTitle}
             />
           </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="show-legend"
-              checked={analysisOptions.showLegend}
-              onCheckedChange={(checked) => updateOptions({ showLegend: checked as boolean })}
-            />
-            <Label htmlFor="show-legend">Show Legend</Label>
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="show-legend"
+                checked={analysisOptions.showLegend}
+                onCheckedChange={(checked) => updateOptions({ showLegend: checked as boolean })}
+              />
+              <Label htmlFor="show-legend">Show Legend</Label>
+            </div>
+            {analysisOptions.showLegend && (
+              <RadioGroup 
+                value={analysisOptions.legendPosition} 
+                onValueChange={(value) => updateOptions({ legendPosition: value as 'top left' | 'top right' })}
+                className="ml-6"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="top left" id="legend-left" />
+                  <Label htmlFor="legend-left" className="font-normal">Top Left</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="top right" id="legend-right" />
+                  <Label htmlFor="legend-right" className="font-normal">Top Right</Label>
+                </div>
+              </RadioGroup>
+            )}
           </div>
           <div className="flex items-center space-x-2">
             <Checkbox 
@@ -178,16 +200,28 @@ export function AnalysisOptions() {
           </div>
           <div>
             <Label htmlFor="spd-line-weight">Line Weight (px)</Label>
-            <Input 
-              id="spd-line-weight"
-              type="number"
-              min="0.5"
-              max="10"
-              step="0.5"
-              value={analysisOptions.spdLineWeight}
-              onChange={(e) => updateOptions({ spdLineWeight: parseFloat(e.target.value) || 2 })}
-              disabled={!analysisOptions.showSpdLine}
-            />
+            <div className="flex items-center gap-2">
+              <Input 
+                id="spd-line-weight"
+                type="number"
+                min="0.25"
+                max="4"
+                step="0.25"
+                value={analysisOptions.spdLineWeight}
+                onChange={(e) => updateOptions({ spdLineWeight: parseFloat(e.target.value) || 2 })}
+                disabled={!analysisOptions.showSpdLine}
+                className="w-20"
+              />
+              <Slider
+                value={[analysisOptions.spdLineWeight]}
+                onValueChange={(value) => updateOptions({ spdLineWeight: value[0] })}
+                min={0.25}
+                max={4}
+                step={0.25}
+                disabled={!analysisOptions.showSpdLine}
+                className="flex-1"
+              />
+            </div>
           </div>
         </div>
       </div>
