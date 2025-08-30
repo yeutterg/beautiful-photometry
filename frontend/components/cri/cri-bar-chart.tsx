@@ -5,6 +5,9 @@ import { Bar, BarChart, CartesianGrid, Cell, Legend, ResponsiveContainer, Toolti
 import { CRI_COLORS } from "@/lib/cri-constants"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
+import { Pencil } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 
 interface CRIData {
   id: string
@@ -31,10 +34,14 @@ interface CRIData {
 
 interface CRIBarChartProps {
   data: CRIData[]
+  title?: string
 }
 
-export function CRIBarChart({ data }: CRIBarChartProps) {
+export function CRIBarChart({ data, title = "Color Rendering Index" }: CRIBarChartProps) {
   const [showValues, setShowValues] = useState(true)
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [chartTitle, setChartTitle] = useState(title)
+  const [tempTitle, setTempTitle] = useState(title)
 
   if (data.length === 0) {
     return (
@@ -52,7 +59,8 @@ export function CRIBarChart({ data }: CRIBarChartProps) {
     }
     data.forEach((dataset, index) => {
       const value = dataset.values[key as keyof typeof dataset.values]
-      dataPoint[`dataset${index}`] = value ? Math.round(value) : 0
+      // Keep the value as is if it's a valid number (including 0), otherwise default to 0
+      dataPoint[`dataset${index}`] = value !== undefined && value !== null ? Math.round(value) : 0
     })
     return dataPoint
   })
@@ -79,6 +87,16 @@ export function CRIBarChart({ data }: CRIBarChartProps) {
     return null
   }
 
+  const handleSaveTitle = () => {
+    setChartTitle(tempTitle)
+    setIsEditingTitle(false)
+  }
+
+  const handleCancelEdit = () => {
+    setTempTitle(chartTitle)
+    setIsEditingTitle(false)
+  }
+
   return (
     <div className="space-y-4">
       {/* Checkbox */}
@@ -91,6 +109,38 @@ export function CRIBarChart({ data }: CRIBarChartProps) {
         <Label htmlFor="show-values" className="text-sm font-normal cursor-pointer">
           Show values on chart
         </Label>
+      </div>
+      
+      {/* Editable Title */}
+      <div className="flex items-center justify-center gap-2 mb-2">
+        {isEditingTitle ? (
+          <div className="flex items-center gap-2">
+            <Input 
+              value={tempTitle}
+              onChange={(e) => setTempTitle(e.target.value)}
+              className="text-lg font-semibold text-center w-64"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSaveTitle()
+                if (e.key === 'Escape') handleCancelEdit()
+              }}
+              autoFocus
+            />
+            <Button size="sm" variant="ghost" onClick={handleSaveTitle}>Save</Button>
+            <Button size="sm" variant="ghost" onClick={handleCancelEdit}>Cancel</Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold">{chartTitle}</h3>
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              className="h-6 w-6 p-0"
+              onClick={() => setIsEditingTitle(true)}
+            >
+              <Pencil className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
       </div>
       
       {/* Chart */}
