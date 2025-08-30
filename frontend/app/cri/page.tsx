@@ -106,11 +106,6 @@ export default function CRIPage() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      {/* Page Title */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Color Rendering Index</h1>
-      </div>
-
       {/* Bar Chart */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">

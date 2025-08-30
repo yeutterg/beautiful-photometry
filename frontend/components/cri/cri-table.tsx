@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { CRI_DESCRIPTIONS } from "@/lib/cri-constants"
+import { CRI_DESCRIPTIONS, CRI_COLORS } from "@/lib/cri-constants"
 
 interface CRIData {
   id: string
@@ -66,7 +66,13 @@ export function CRITable({ data }: CRITableProps) {
           {rValues.map(rValue => (
             <TableRow key={rValue}>
               <TableCell className="font-medium">
-                {rValue === 'ra' ? 'Ra' : rValue.toUpperCase().replace('R', 'R')}
+                <div className="flex items-center gap-2">
+                  <div 
+                    className="w-4 h-4 rounded border border-border"
+                    style={{ backgroundColor: CRI_COLORS[rValue] }}
+                  />
+                  {rValue === 'ra' ? 'Ra' : rValue.toUpperCase().replace('R', 'R')}
+                </div>
               </TableCell>
               <TableCell className="text-muted-foreground">
                 {CRI_DESCRIPTIONS[rValue]}
@@ -75,7 +81,7 @@ export function CRITable({ data }: CRITableProps) {
                 const value = dataset.values[rValue]
                 return (
                   <TableCell key={`${dataset.id}-${rValue}`} className="text-right font-mono">
-                    {value !== undefined ? Math.round(value) : '-'}
+                    {value !== undefined ? value.toFixed(1) : '-'}
                   </TableCell>
                 )
               })}

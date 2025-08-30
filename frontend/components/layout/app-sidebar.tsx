@@ -21,7 +21,7 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b px-6 py-3">
-        <h1 className="text-base font-normal">Beautiful Photometry</h1>
+        <h1 className="text-base font-normal group-data-[collapsible=icon]:hidden">Beautiful Photometry</h1>
       </SidebarHeader>
       <SidebarContent>
         {/* Library Section */}

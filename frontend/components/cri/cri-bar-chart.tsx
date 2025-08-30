@@ -1,7 +1,10 @@
 "use client"
 
+import { useState } from "react"
 import { Bar, BarChart, CartesianGrid, Cell, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { CRI_COLORS } from "@/lib/cri-constants"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
 
 interface CRIData {
   id: string
@@ -31,6 +34,8 @@ interface CRIBarChartProps {
 }
 
 export function CRIBarChart({ data }: CRIBarChartProps) {
+  const [showValues, setShowValues] = useState(true)
+
   if (data.length === 0) {
     return (
       <div className="h-96 flex items-center justify-center text-muted-foreground">
@@ -52,49 +57,81 @@ export function CRIBarChart({ data }: CRIBarChartProps) {
     return dataPoint
   })
 
+  // Custom tooltip with proper background
+  const CustomTooltip = ({ active, payload, label }: {
+    active?: boolean
+    payload?: Array<{ name: string; value: number; color?: string }>
+    label?: string
+  }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-background border border-border rounded-lg shadow-lg p-3">
+          <p className="font-semibold mb-1">{label}</p>
+          {payload.map((entry, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <span className="text-muted-foreground text-sm">{entry.name}:</span>
+              <span className="font-mono font-medium text-sm">{entry.value}</span>
+            </div>
+          ))}
+        </div>
+      )
+    }
+    return null
+  }
+
   return (
-    <ResponsiveContainer width="100%" height={400}>
-      <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-        <XAxis 
-          dataKey="name" 
-          className="text-xs"
-          tick={{ fill: 'currentColor' }}
+    <div className="space-y-4">
+      {/* Checkbox */}
+      <div className="flex items-center space-x-2">
+        <Checkbox 
+          id="show-values" 
+          checked={showValues}
+          onCheckedChange={(checked) => setShowValues(checked as boolean)}
         />
-        <YAxis 
-          domain={[0, 100]}
-          className="text-xs"
-          tick={{ fill: 'currentColor' }}
-        />
-        <Tooltip 
-          contentStyle={{ 
-            backgroundColor: 'hsl(var(--background))',
-            border: '1px solid hsl(var(--border))',
-            borderRadius: '6px'
-          }}
-          formatter={(value: number | string, name: string) => {
-            const datasetIndex = parseInt(name.replace('dataset', ''))
-            const datasetName = data[datasetIndex]?.name || name
-            return [value, datasetName]
-          }}
-        />
-        {data.length > 1 && <Legend />}
-        
-        {data.map((dataset, index) => (
-          <Bar
-            key={dataset.id}
-            dataKey={`dataset${index}`}
-            name={dataset.name}
-          >
-            {chartData.map((entry, idx) => (
-              <Cell 
-                key={`cell-${idx}`} 
-                fill={CRI_COLORS[entry.criKey as keyof typeof CRI_COLORS]} 
-              />
-            ))}
-          </Bar>
-        ))}
-      </BarChart>
-    </ResponsiveContainer>
+        <Label htmlFor="show-values" className="text-sm font-normal cursor-pointer">
+          Show values on chart
+        </Label>
+      </div>
+      
+      {/* Chart */}
+      <ResponsiveContainer width="100%" height={400}>
+        <BarChart 
+          data={chartData} 
+          margin={{ top: 30, right: 30, left: 20, bottom: 20 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis 
+            dataKey="name"
+            tick={{ fontSize: 12, fill: "currentColor" }}
+            stroke="currentColor"
+          />
+          <YAxis 
+            domain={[0, 100]}
+            tick={{ fontSize: 12, fill: "currentColor" }}
+            stroke="currentColor"
+          />
+          <Tooltip content={<CustomTooltip />} />
+          {data.length > 1 && <Legend />}
+          
+          {/* Render bars for each dataset */}
+          {data.map((dataset, datasetIndex) => (
+            <Bar
+              key={dataset.id}
+              dataKey={`dataset${datasetIndex}`}
+              name={dataset.name}
+              label={showValues ? { position: "top", fontSize: 10 } : undefined}
+            >
+              {/* Apply CRI colors to each bar segment */}
+              {chartData.map((entry, index) => (
+                <Cell 
+                  key={`cell-${index}`}
+                  fill={CRI_COLORS[entry.criKey as keyof typeof CRI_COLORS]}
+                />
+              ))}
+            </Bar>
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
   )
 }
