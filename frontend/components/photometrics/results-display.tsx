@@ -43,7 +43,6 @@ export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
   const { results, currentSPDs } = useAnalysisStore()
   const { getItem } = useLibraryStore()
   const [metricsData, setMetricsData] = useState<MetricsData[]>([])
-  const [metricsLoading, setMetricsLoading] = useState(false)
   
   // Fetch metrics when SPDs change
   useEffect(() => {
@@ -53,7 +52,6 @@ export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
         return
       }
       
-      setMetricsLoading(true)
       try {
         // Get SPD data from library
         const spds = currentSPDs
@@ -85,8 +83,6 @@ export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
       } catch (error) {
         console.error('Error fetching metrics:', error)
         setMetricsData([])
-      } finally {
-        setMetricsLoading(false)
       }
     }
     

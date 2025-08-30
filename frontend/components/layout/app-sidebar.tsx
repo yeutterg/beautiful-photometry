@@ -13,13 +13,13 @@ import {
   SidebarGroupLabel,
   SidebarGroupContent,
 } from "@/components/ui/sidebar"
-import { Library, LineChart, Activity, Sun, Lightbulb } from "lucide-react"
+import { Library, LineChart, Activity, Sun, Palette } from "lucide-react"
 
 export function AppSidebar() {
   const pathname = usePathname()
 
   return (
-    <Sidebar collapsible="none">
+    <Sidebar collapsible="icon">
       <SidebarHeader className="border-b px-6 py-3">
         <h1 className="text-base font-normal">Beautiful Photometry</h1>
       </SidebarHeader>
@@ -56,7 +56,7 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname === "/cri"}>
                   <Link href="/cri">
-                    <Lightbulb className="h-4 w-4" />
+                    <Palette className="h-4 w-4" />
                     <span>CRI</span>
                   </Link>
                 </SidebarMenuButton>
