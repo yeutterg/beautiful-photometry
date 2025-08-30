@@ -119,7 +119,7 @@ export function CRIBarChart({ data }: CRIBarChartProps) {
               key={dataset.id}
               dataKey={`dataset${datasetIndex}`}
               name={dataset.name}
-              label={showValues ? { position: "top", fontSize: 10 } : undefined}
+              label={showValues ? { position: "top", fontSize: 10, fill: "currentColor" } : undefined}
             >
               {/* Apply CRI colors to each bar segment */}
               {chartData.map((entry, index) => (
