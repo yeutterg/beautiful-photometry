@@ -3,12 +3,15 @@
 import { useState, useEffect, useRef } from "react"
 import { Card } from "@/components/ui/card"
 import { CRIBarChart } from "@/components/cri/cri-bar-chart"
+import { Checkbox } from "@/components/ui/checkbox"
 import { CRITable } from "@/components/cri/cri-table"
 import { useAnalysisStore, useLibraryStore } from "@/lib/store"
 import { Loader2, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
-import html2canvas from "html2canvas"
+import { toPng } from "html-to-image"
 
 interface CRIData {
   id: string
@@ -36,6 +39,9 @@ interface CRIData {
 export default function CRIPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [criData, setCriData] = useState<CRIData[]>([])
+  const [exportWidth, setExportWidth] = useState(1920)
+  const [exportHeight, setExportHeight] = useState(1080)
+  const [showValues, setShowValues] = useState(true)
   const { currentSPDs } = useAnalysisStore()
   const { getItem } = useLibraryStore()
   const chartRef = useRef<HTMLDivElement>(null)
@@ -99,73 +105,119 @@ export default function CRIPage() {
     }
     
     try {
-      // Wait for chart animations to complete
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
       const element = chartRef.current
       
-      // Force a specific background color for export
-      const isDarkMode = document.documentElement.classList.contains('dark')
-      const bgColor = isDarkMode ? '#0a0a0a' : '#ffffff'
+      // Calculate scale factor based on desired dimensions
+      const currentRect = element.getBoundingClientRect()
+      const scaleX = exportWidth / currentRect.width
+      const scaleY = exportHeight / currentRect.height
+      const scale = Math.min(scaleX, scaleY)
       
-      // Clone the element to avoid modifying the original
-      const clonedElement = element.cloneNode(true) as HTMLElement
-      clonedElement.style.backgroundColor = bgColor
-      clonedElement.style.padding = '20px'
+      // Wait for chart to be fully rendered
+      await new Promise(resolve => setTimeout(resolve, 500))
       
-      // Temporarily append to body (hidden)
-      clonedElement.style.position = 'absolute'
-      clonedElement.style.left = '-9999px'
-      document.body.appendChild(clonedElement)
-      
-      try {
-        const canvas = await html2canvas(clonedElement, {
-          backgroundColor: bgColor,
-          scale: 2,
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
-          onclone: (clonedDoc) => {
-            // Ensure SVG elements are properly rendered
-            const svgElements = clonedDoc.querySelectorAll('svg')
-            svgElements.forEach(svg => {
-              svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
-            })
-          }
-        })
-        
-        // Remove cloned element
-        document.body.removeChild(clonedElement)
-        
-        // Create download link
-        const dataUrl = canvas.toDataURL('image/png')
-        const link = document.createElement('a')
-        link.download = `cri-chart-${new Date().toISOString().split('T')[0]}.png`
-        link.href = dataUrl
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        
-        toast.success('Chart exported successfully')
-      } catch (innerError) {
-        // Clean up cloned element if error occurs
-        if (document.body.contains(clonedElement)) {
-          document.body.removeChild(clonedElement)
+      // Use html-to-image for better SVG support
+      const dataUrl = await toPng(element, {
+        quality: 1.0,
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+        width: exportWidth,
+        height: exportHeight,
+        style: {
+          transform: `scale(${scale})`,
+          transformOrigin: 'top left',
+          width: `${currentRect.width}px`,
+          height: `${currentRect.height}px`
+        },
+        filter: (node) => {
+          // Exclude controls and edit buttons
+          const element = node as HTMLElement
+          return !element.classList?.contains('export-controls') && 
+                 !element.classList?.contains('edit-button')
         }
-        throw innerError
-      }
+      })
+      
+      // Download the image
+      const link = document.createElement('a')
+      link.download = `cri-chart-${new Date().toISOString().split('T')[0]}.png`
+      link.href = dataUrl
+      link.click()
+      
+      toast.success('Chart exported successfully')
     } catch (error) {
       console.error('PNG export failed:', error)
       
-      // Show user-friendly error message
-      toast.error('Unable to export chart as image. This may be due to browser security settings. Please try using your browser\'s screenshot feature or export as CSV.')
-      
-      // Offer CSV as alternative
-      const confirmCSV = window.confirm('Would you like to export the data as CSV instead?')
-      if (confirmCSV) {
-        exportChartAsCSV()
+      // Try fallback method
+      try {
+        await exportChartFallback()
+      } catch (fallbackError) {
+        console.error('Fallback export also failed:', fallbackError)
+        toast.error('Unable to export chart as PNG. Please try using browser screenshot or export as CSV.')
       }
     }
+  }
+  
+  const exportChartFallback = async () => {
+    if (!chartRef.current) throw new Error('Chart not ready')
+    
+    // Get the SVG element from Recharts
+    const svg = chartRef.current.querySelector('svg.recharts-surface')
+    if (!svg) throw new Error('No chart SVG found')
+    
+    // Create canvas with user-defined dimensions
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('Cannot get canvas context')
+    
+    canvas.width = exportWidth
+    canvas.height = exportHeight
+    
+    // Draw white background
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    
+    // Get SVG dimensions
+    const svgRect = svg.getBoundingClientRect()
+    const scale = Math.min(
+      exportWidth / svgRect.width,
+      exportHeight / svgRect.height
+    )
+    
+    // Convert SVG to data URL
+    const svgData = new XMLSerializer().serializeToString(svg)
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+    const svgUrl = URL.createObjectURL(svgBlob)
+    
+    // Draw SVG on canvas
+    const img = new Image()
+    img.onload = () => {
+      ctx.save()
+      ctx.scale(scale, scale)
+      ctx.drawImage(img, 0, 0)
+      ctx.restore()
+      URL.revokeObjectURL(svgUrl)
+      
+      // Download canvas as PNG
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          throw new Error('Failed to create image blob')
+        }
+        
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.download = `cri-chart-${new Date().toISOString().split('T')[0]}.png`
+        link.href = url
+        link.click()
+        window.URL.revokeObjectURL(url)
+        
+        toast.success('Chart exported successfully (fallback method)')
+      }, 'image/png')
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(svgUrl)
+      throw new Error('Failed to load SVG image')
+    }
+    img.src = svgUrl
   }
   
   const exportChartAsCSV = () => {
@@ -212,28 +264,18 @@ export default function CRIPage() {
       
       const element = tableRef.current
       
-      // Get computed styles for theme
-      const computedStyle = window.getComputedStyle(element)
-      const bgColor = computedStyle.backgroundColor === 'rgba(0, 0, 0, 0)' ? '#ffffff' : computedStyle.backgroundColor
-      
-      const canvas = await html2canvas(element, {
-        backgroundColor: bgColor,
-        scale: 2,
-        logging: true,
-        useCORS: true,
-        allowTaint: true,
-        windowWidth: element.scrollWidth,
-        windowHeight: element.scrollHeight
+      // Use html-to-image for table export too
+      const dataUrl = await toPng(element, {
+        quality: 1.0,
+        pixelRatio: 2,
+        backgroundColor: '#ffffff'
       })
       
       // Create download link
-      const dataUrl = canvas.toDataURL('image/png')
       const link = document.createElement('a')
       link.download = `cri-table-${new Date().toISOString().split('T')[0]}.png`
       link.href = dataUrl
-      document.body.appendChild(link)
       link.click()
-      document.body.removeChild(link)
       
       toast.success('Table exported successfully')
     } catch (error) {
@@ -271,13 +313,41 @@ export default function CRIPage() {
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">CRI Chart</h2>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4 export-controls">
             {isLoading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
             {!isLoading && criData.length > 0 && (
-              <Button onClick={exportChart} variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
+              <>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="export-width" className="text-sm">Width:</Label>
+                  <Input
+                    id="export-width"
+                    type="number"
+                    value={exportWidth}
+                    onChange={(e) => setExportWidth(Number(e.target.value))}
+                    className="w-20 h-8"
+                    min="100"
+                    max="10000"
+                  />
+                  <span className="text-sm text-muted-foreground">px</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="export-height" className="text-sm">Height:</Label>
+                  <Input
+                    id="export-height"
+                    type="number"
+                    value={exportHeight}
+                    onChange={(e) => setExportHeight(Number(e.target.value))}
+                    className="w-20 h-8"
+                    min="100"
+                    max="10000"
+                  />
+                  <span className="text-sm text-muted-foreground">px</span>
+                </div>
+                <Button onClick={exportChart} variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -289,9 +359,22 @@ export default function CRIPage() {
             </div>
           </div>
         ) : (
-          <div ref={chartRef} className="bg-card p-4">
-            <CRIBarChart data={criData} />
-          </div>
+          <>
+            {/* Checkbox outside the exportable area */}
+            <div className="flex items-center space-x-2 mb-4">
+              <Checkbox 
+                id="show-values" 
+                checked={showValues}
+                onCheckedChange={(checked) => setShowValues(checked as boolean)}
+              />
+              <Label htmlFor="show-values" className="text-sm font-normal cursor-pointer">
+                Show values on chart
+              </Label>
+            </div>
+            <div ref={chartRef} className="bg-background rounded-lg p-4">
+              <CRIBarChart data={criData} exportMode={false} showValues={showValues} />
+            </div>
+          </>
         )}
       </Card>
 

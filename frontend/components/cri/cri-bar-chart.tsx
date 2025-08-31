@@ -3,8 +3,6 @@
 import { useState } from "react"
 import { Bar, BarChart, CartesianGrid, Cell, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { CRI_COLORS } from "@/lib/cri-constants"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
 import { Pencil } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -35,10 +33,21 @@ interface CRIData {
 interface CRIBarChartProps {
   data: CRIData[]
   title?: string
+  exportMode?: boolean
+  showValues?: boolean
+  width?: number
+  height?: number
 }
 
-export function CRIBarChart({ data, title = "Color Rendering Index" }: CRIBarChartProps) {
-  const [showValues, setShowValues] = useState(true)
+export function CRIBarChart({ 
+  data, 
+  title = "Color Rendering Index",
+  exportMode = false,
+  showValues: showValuesProp = true,
+  width,
+  height = 400
+}: CRIBarChartProps) {
+  const showValues = showValuesProp
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [chartTitle, setChartTitle] = useState(title)
   const [tempTitle, setTempTitle] = useState(title)
@@ -98,22 +107,10 @@ export function CRIBarChart({ data, title = "Color Rendering Index" }: CRIBarCha
   }
 
   return (
-    <div className="space-y-4">
-      {/* Checkbox */}
-      <div className="flex items-center space-x-2">
-        <Checkbox 
-          id="show-values" 
-          checked={showValues}
-          onCheckedChange={(checked) => setShowValues(checked as boolean)}
-        />
-        <Label htmlFor="show-values" className="text-sm font-normal cursor-pointer">
-          Show values on chart
-        </Label>
-      </div>
-      
+    <div className="space-y-4" style={exportMode ? { backgroundColor: '#ffffff', color: '#000000' } : undefined}>
       {/* Editable Title */}
       <div className="flex items-center justify-center gap-2 mb-2">
-        {isEditingTitle ? (
+        {isEditingTitle && !exportMode ? (
           <div className="flex items-center gap-2">
             <Input 
               value={tempTitle}
@@ -130,21 +127,25 @@ export function CRIBarChart({ data, title = "Color Rendering Index" }: CRIBarCha
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold">{chartTitle}</h3>
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              className="h-6 w-6 p-0"
-              onClick={() => setIsEditingTitle(true)}
-            >
-              <Pencil className="h-3 w-3" />
-            </Button>
+            <h3 className="text-lg font-semibold" style={exportMode ? { color: '#000000' } : undefined}>
+              {chartTitle}
+            </h3>
+            {!exportMode && (
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                className="h-6 w-6 p-0 edit-button"
+                onClick={() => setIsEditingTitle(true)}
+              >
+                <Pencil className="h-3 w-3" />
+              </Button>
+            )}
           </div>
         )}
       </div>
       
       {/* Chart */}
-      <ResponsiveContainer width="100%" height={400}>
+      <ResponsiveContainer width={width || "100%"} height={height}>
         <BarChart 
           data={chartData} 
           margin={{ top: 30, right: 30, left: 20, bottom: 20 }}
@@ -152,13 +153,13 @@ export function CRIBarChart({ data, title = "Color Rendering Index" }: CRIBarCha
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis 
             dataKey="name"
-            tick={{ fontSize: 12, fill: "currentColor" }}
-            stroke="currentColor"
+            tick={{ fontSize: 12, fill: exportMode ? "#000000" : "currentColor" }}
+            stroke={exportMode ? "#000000" : "currentColor"}
           />
           <YAxis 
             domain={[0, 100]}
-            tick={{ fontSize: 12, fill: "currentColor" }}
-            stroke="currentColor"
+            tick={{ fontSize: 12, fill: exportMode ? "#000000" : "currentColor" }}
+            stroke={exportMode ? "#000000" : "currentColor"}
           />
           <Tooltip content={<CustomTooltip />} />
           {data.length > 1 && <Legend />}
@@ -169,7 +170,7 @@ export function CRIBarChart({ data, title = "Color Rendering Index" }: CRIBarCha
               key={dataset.id}
               dataKey={`dataset${datasetIndex}`}
               name={dataset.name}
-              label={showValues ? { position: "top", fontSize: 10, fill: "currentColor" } : undefined}
+              label={showValues ? { position: "top", fontSize: 10, fill: exportMode ? "#000000" : "currentColor" } : undefined}
             >
               {/* Apply CRI colors to each bar segment */}
               {chartData.map((entry, index) => (
