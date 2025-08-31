@@ -3,6 +3,29 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Force black text when exporting */
+.exporting {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+.exporting * {
+  color: #000000 !important;
+  fill: #000000 !important;
+}
+
+.exporting .recharts-text {
+  fill: #000000 !important;
+}
+
+.exporting .recharts-cartesian-axis-tick-value {
+  fill: #000000 !important;
+}
+
+.exporting .recharts-label {
+  fill: #000000 !important;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

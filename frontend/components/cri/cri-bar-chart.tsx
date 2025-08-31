@@ -107,7 +107,14 @@ export function CRIBarChart({
   }
 
   return (
-    <div className="space-y-4" style={exportMode ? { backgroundColor: '#ffffff', color: '#000000' } : undefined}>
+    <div 
+      className="space-y-4 export-chart-container" 
+      style={exportMode ? { 
+        backgroundColor: '#ffffff', 
+        color: '#000000',
+        width: width ? `${width}px` : '100%',
+        height: height ? `${height}px` : 'auto'
+      } : undefined}>
       {/* Editable Title */}
       <div className="flex items-center justify-center gap-2 mb-2">
         {isEditingTitle && !exportMode ? (

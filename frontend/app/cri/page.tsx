@@ -42,6 +42,7 @@ export default function CRIPage() {
   const [exportWidth, setExportWidth] = useState(1920)
   const [exportHeight, setExportHeight] = useState(1080)
   const [showValues, setShowValues] = useState(true)
+  const [previewMode, setPreviewMode] = useState(false)
   const { currentSPDs } = useAnalysisStore()
   const { getItem } = useLibraryStore()
   const chartRef = useRef<HTMLDivElement>(null)
@@ -107,16 +108,13 @@ export default function CRIPage() {
     try {
       const element = chartRef.current
       
-      // Calculate scale factor based on desired dimensions
-      const currentRect = element.getBoundingClientRect()
-      const scaleX = exportWidth / currentRect.width
-      const scaleY = exportHeight / currentRect.height
-      const scale = Math.min(scaleX, scaleY)
+      // Add a temporary class to force export styles
+      element.classList.add('exporting')
       
       // Wait for chart to be fully rendered
       await new Promise(resolve => setTimeout(resolve, 500))
       
-      // Use html-to-image for better SVG support
+      // Use html-to-image with scaling
       const dataUrl = await toPng(element, {
         quality: 1.0,
         pixelRatio: 2,
@@ -124,10 +122,10 @@ export default function CRIPage() {
         width: exportWidth,
         height: exportHeight,
         style: {
-          transform: `scale(${scale})`,
+          transform: previewMode ? undefined : `scale(${exportWidth / element.offsetWidth}, ${exportHeight / element.offsetHeight})`,
           transformOrigin: 'top left',
-          width: `${currentRect.width}px`,
-          height: `${currentRect.height}px`
+          width: previewMode ? undefined : `${element.offsetWidth}px`,
+          height: previewMode ? undefined : `${element.offsetHeight}px`
         },
         filter: (node) => {
           // Exclude controls and edit buttons
@@ -136,6 +134,9 @@ export default function CRIPage() {
                  !element.classList?.contains('edit-button')
         }
       })
+      
+      // Remove the export class
+      element.classList.remove('exporting')
       
       // Download the image
       const link = document.createElement('a')
@@ -323,7 +324,10 @@ export default function CRIPage() {
                     id="export-width"
                     type="number"
                     value={exportWidth}
-                    onChange={(e) => setExportWidth(Number(e.target.value))}
+                    onChange={(e) => {
+                      setExportWidth(Number(e.target.value))
+                      setPreviewMode(true)
+                    }}
                     className="w-20 h-8"
                     min="100"
                     max="10000"
@@ -336,13 +340,24 @@ export default function CRIPage() {
                     id="export-height"
                     type="number"
                     value={exportHeight}
-                    onChange={(e) => setExportHeight(Number(e.target.value))}
+                    onChange={(e) => {
+                      setExportHeight(Number(e.target.value))
+                      setPreviewMode(true)
+                    }}
                     className="w-20 h-8"
                     min="100"
                     max="10000"
                   />
                   <span className="text-sm text-muted-foreground">px</span>
                 </div>
+                <Button 
+                  onClick={() => setPreviewMode(!previewMode)} 
+                  variant="outline" 
+                  size="sm"
+                  className="mr-2"
+                >
+                  {previewMode ? 'Reset View' : 'Preview'}
+                </Button>
                 <Button onClick={exportChart} variant="outline" size="sm">
                   <Download className="h-4 w-4 mr-2" />
                   Export
@@ -371,8 +386,24 @@ export default function CRIPage() {
                 Show values on chart
               </Label>
             </div>
-            <div ref={chartRef} className="bg-background rounded-lg p-4">
-              <CRIBarChart data={criData} exportMode={false} showValues={showValues} />
+            <div 
+              ref={chartRef} 
+              className="rounded-lg p-4 overflow-auto"
+              style={{
+                backgroundColor: 'var(--background)',
+                ...(previewMode ? {
+                  width: `${Math.min(exportWidth, typeof window !== 'undefined' ? window.innerWidth - 100 : 1920)}px`,
+                  height: `${Math.min(exportHeight, typeof window !== 'undefined' ? window.innerHeight - 200 : 1080)}px`
+                } : {})
+              }}
+            >
+              <CRIBarChart 
+                data={criData} 
+                exportMode={false} 
+                showValues={showValues}
+                width={previewMode ? exportWidth : undefined}
+                height={previewMode ? exportHeight : undefined}
+              />
             </div>
           </>
         )}
