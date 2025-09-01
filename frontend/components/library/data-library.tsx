@@ -170,9 +170,8 @@ export function DataLibrary() {
         const titleMatch = items.find(i => i.title === item.title)
         if (titleMatch) {
           console.log('Found by title, using ID:', titleMatch.id)
-          setCurrentSPDs([titleMatch.id])
-          router.push("/spd")
-          toast.success(`Loaded ${item.title} for analysis`)
+          addCurrentSPDs([titleMatch.id])  // Changed to add instead of set
+          toast.success(`Added ${item.title} to loaded items`)
           return
         }
         console.log('ERROR: Item not found in store at all')
@@ -180,11 +179,10 @@ export function DataLibrary() {
         return
       }
       
-      console.log('Found in store, setting current SPD to:', item.id)
-      // Load single SPD into analysis store  
-      setCurrentSPDs([item.id])
-      router.push("/spd")
-      toast.success(`Loaded ${item.title} for analysis`)
+      console.log('Found in store, adding SPD to current items:', item.id)
+      // Add SPD to analysis store (instead of replacing)
+      addCurrentSPDs([item.id])  // Changed to add instead of set
+      toast.success(`Added ${item.title} to loaded items`)
     } else if (item.type === "Flicker") {
       router.push("/flicker")
     }

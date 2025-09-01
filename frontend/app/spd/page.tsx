@@ -26,11 +26,12 @@ function useDebounce<T>(value: T, delay: number): T {
 
 export default function PhotometricsPage() {
   const [isLoading, setIsLoading] = useState(false)
-  const { currentSPDs, analysisOptions, setResults, aliases } = useAnalysisStore()
+  const { currentSPDs, analysisOptions, setResults, aliases, spdColors } = useAnalysisStore()
   const { getItem } = useLibraryStore()
   
   // Debounce the analysis options to prevent rapid re-renders
   const debouncedOptions = useDebounce(analysisOptions, 500) // Increased debounce time
+  const debouncedColors = useDebounce(spdColors, 300) // Debounce color changes
 
   const analyzeData = useCallback(async () => {
     if (currentSPDs.length === 0) {
@@ -52,6 +53,10 @@ export default function PhotometricsPage() {
         return
       }
 
+      // Log colors for debugging
+      console.log('SPD Colors:', debouncedColors)
+      console.log('Colors being sent:', spds.map(s => ({ id: s!.id, color: debouncedColors[s!.id] || '#000000' })))
+      
       // Map our options to API format - use debouncedOptions
       const apiOptions = {
         normalize: debouncedOptions.normalize,
@@ -67,8 +72,9 @@ export default function PhotometricsPage() {
         chart_width: debouncedOptions.chartWidth,
         chart_height: debouncedOptions.chartHeight,
         show_spd_line: debouncedOptions.showSpdLine,
-        spd_line_color: debouncedOptions.spdLineColor,
-        spd_line_weight: debouncedOptions.spdLineWeight
+        spd_line_weight: debouncedOptions.spdLineWeight,
+        // Pass individual SPD colors
+        spd_colors: spds.map(s => debouncedColors[s!.id] || '#000000')
       }
       
       // Call API to analyze
@@ -103,7 +109,7 @@ export default function PhotometricsPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [currentSPDs, debouncedOptions, getItem, setResults, aliases])
+  }, [currentSPDs, debouncedOptions, getItem, setResults, aliases, debouncedColors])
 
   // Auto-update when SPDs or debounced options change
   useEffect(() => {

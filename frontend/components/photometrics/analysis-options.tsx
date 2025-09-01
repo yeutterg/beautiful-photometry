@@ -18,8 +18,7 @@ export function AnalysisOptions() {
     maxWavelength: analysisOptions.maxWavelength,
     chartWidth: analysisOptions.chartWidth,
     chartHeight: analysisOptions.chartHeight,
-    chartTitle: analysisOptions.chartTitle,
-    spdLineColor: analysisOptions.spdLineColor
+    chartTitle: analysisOptions.chartTitle
   })
   
   const handleNumericChange = (field: keyof typeof localValues, value: number) => {
@@ -54,12 +53,11 @@ export function AnalysisOptions() {
       maxWavelength: analysisOptions.maxWavelength,
       chartWidth: analysisOptions.chartWidth,
       chartHeight: analysisOptions.chartHeight,
-      chartTitle: analysisOptions.chartTitle,
-      spdLineColor: analysisOptions.spdLineColor
+      chartTitle: analysisOptions.chartTitle
     })
   }, [analysisOptions.minWavelength, analysisOptions.maxWavelength, 
       analysisOptions.chartWidth, analysisOptions.chartHeight,
-      analysisOptions.chartTitle, analysisOptions.spdLineColor])
+      analysisOptions.chartTitle])
 
   return (
     <div className="space-y-6">
@@ -189,9 +187,9 @@ export function AnalysisOptions() {
 
       <Separator />
 
-      {/* SPD Line Settings */}
+      {/* Line Settings */}
       <div>
-        <h3 className="font-medium mb-3 text-base text-primary">SPD Line Settings</h3>
+        <h3 className="font-medium mb-3 text-base text-primary">Line Settings</h3>
         <div className="space-y-3">
           <div className="flex items-center space-x-2">
             <Checkbox 
@@ -199,30 +197,7 @@ export function AnalysisOptions() {
               checked={analysisOptions.showSpdLine}
               onCheckedChange={(checked) => updateOptions({ showSpdLine: checked as boolean })}
             />
-            <Label htmlFor="show-spd-line">Show SPD Line</Label>
-          </div>
-          <div>
-            <Label htmlFor="spd-line-color">Line Color</Label>
-            <div className="flex gap-2 items-center">
-              <Input 
-                id="spd-line-color"
-                type="color"
-                value={analysisOptions.spdLineColor}
-                onChange={(e) => updateOptions({ spdLineColor: e.target.value })}
-                className="w-20 h-10 p-1 cursor-pointer"
-                disabled={!analysisOptions.showSpdLine}
-              />
-              <Input
-                type="text"
-                value={localValues.spdLineColor}
-                onChange={(e) => handleTextChange('spdLineColor', e.target.value)}
-                onBlur={() => handleTextBlur('spdLineColor')}
-                onKeyPress={(e) => handleKeyPress(e, 'spdLineColor')}
-                className="flex-1"
-                disabled={!analysisOptions.showSpdLine}
-                placeholder="#000000"
-              />
-            </div>
+            <Label htmlFor="show-spd-line">Show Lines</Label>
           </div>
           <div>
             <Label htmlFor="spd-line-weight">Line Weight (px)</Label>
