@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { Card } from "@/components/ui/card"
 import { MetricBarChart } from "@/components/shared/metric-bar-chart"
-import { MetricTable } from "@/components/shared/metric-table"
+import { TM30Table } from "@/components/tm30/tm30-table"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useAnalysisStore, useLibraryStore } from "@/lib/store"
 import { Loader2, Download } from "lucide-react"
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { toPng } from "html-to-image"
+import { TM30_COLORS } from "@/lib/tm30-constants"
 
 const TS_API_BASE_URL = process.env.NEXT_PUBLIC_TS_API_URL || 'http://localhost:8081'
 
@@ -20,27 +21,6 @@ interface TM30Data {
   name: string
   values: Record<string, number | undefined> // Dynamic to handle all 99 TCS values
 }
-
-// Generate colors for all 99 TCS samples
-// The colors are distributed across the hue circle
-function generateTCSColors(): Record<string, string> {
-  const colors: Record<string, string> = {}
-  
-  for (let i = 1; i <= 99; i++) {
-    // Distribute colors across the hue spectrum (0-360 degrees)
-    const hue = ((i - 1) * 360 / 99) % 360
-    // Vary saturation and lightness for visual distinction
-    const saturation = 70 + (Math.sin(i * 0.5) * 20) // 50-90%
-    const lightness = 45 + (Math.cos(i * 0.3) * 10) // 35-55%
-    
-    const key = `TCS${i.toString().padStart(2, '0')}`
-    colors[key] = `hsl(${Math.round(hue)}, ${Math.round(saturation)}%, ${Math.round(lightness)}%)`
-  }
-  
-  return colors
-}
-
-const TM30_COLORS = generateTCSColors()
 
 export default function TM30Page() {
   const [isLoading, setIsLoading] = useState(false)
@@ -396,13 +376,7 @@ export default function TM30Page() {
           </div>
         ) : (
           <div ref={tableRef} className="bg-card p-4">
-            <MetricTable 
-              data={tm30Data}
-              metricKeys={tm30MetricKeys}
-              formatMetricLabel={formatTM30Label}
-              metricColors={TM30_COLORS}
-              formatValue={(value) => value.toFixed(1)}
-            />
+            <TM30Table data={tm30Data} />
           </div>
         )}
       </Card>
