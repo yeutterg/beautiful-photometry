@@ -40,7 +40,7 @@ interface MetricsData {
 }
 
 export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
-  const { results, currentSPDs } = useAnalysisStore()
+  const { results, currentSPDs, aliases } = useAnalysisStore()
   const { getItem } = useLibraryStore()
   const [metricsData, setMetricsData] = useState<MetricsData[]>([])
   
@@ -59,7 +59,7 @@ export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
           .filter(Boolean)
           .map(item => ({
             id: item!.id,
-            name: item!.title,
+            name: aliases[item!.id] || item!.title,
             data: item!.data
           }))
         
@@ -87,7 +87,7 @@ export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
     }
     
     fetchMetrics()
-  }, [currentSPDs, getItem])
+  }, [currentSPDs, getItem, aliases])
   
   const handleExportChart = async () => {
     if (!results?.chart) {

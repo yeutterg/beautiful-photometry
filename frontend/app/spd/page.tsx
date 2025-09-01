@@ -26,7 +26,7 @@ function useDebounce<T>(value: T, delay: number): T {
 
 export default function PhotometricsPage() {
   const [isLoading, setIsLoading] = useState(false)
-  const { currentSPDs, analysisOptions, setResults } = useAnalysisStore()
+  const { currentSPDs, analysisOptions, setResults, aliases } = useAnalysisStore()
   const { getItem } = useLibraryStore()
   
   // Debounce the analysis options to prevent rapid re-renders
@@ -73,7 +73,7 @@ export default function PhotometricsPage() {
       
       // Call API to analyze
       const result = await api.analyze({
-        spds: spds.map(s => ({ id: s!.id, title: s!.title, data: s!.data })),
+        spds: spds.map(s => ({ id: s!.id, title: aliases[s!.id] || s!.title, data: s!.data })),
         options: apiOptions
       })
       
@@ -103,7 +103,7 @@ export default function PhotometricsPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [currentSPDs, debouncedOptions, getItem, setResults])
+  }, [currentSPDs, debouncedOptions, getItem, setResults, aliases])
 
   // Auto-update when SPDs or debounced options change
   useEffect(() => {

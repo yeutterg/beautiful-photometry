@@ -23,7 +23,7 @@ export function DataLibrary() {
     filepath?: string
   }>>([])
   const [loading, setLoading] = useState(true)
-  const { setCurrentSPDs } = useAnalysisStore()
+  const { setCurrentSPDs, addCurrentSPDs } = useAnalysisStore()
   const { addItemWithId, items, clearItems } = useLibraryStore()
   const [forceRefresh, setForceRefresh] = useState(0)
   const [activeTab, setActiveTab] = useState("all")
@@ -145,9 +145,10 @@ export function DataLibrary() {
     } else {
       // Load selected SPDs into analysis store
       const spdIds = selectedData.filter(item => item.type === "SPD").map(item => item.id)
-      setCurrentSPDs(spdIds)
-      router.push("/spd")
-      toast.success(`Loaded ${spdIds.length} SPD(s) for analysis`)
+      addCurrentSPDs(spdIds)
+      // Stay on the library page; items appear in the sidebar
+      toast.success(`Loaded ${spdIds.length} item(s) to sidebar`)
+      setSelectedItems([])
     }
   }
 

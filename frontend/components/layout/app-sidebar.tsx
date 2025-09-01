@@ -12,11 +12,28 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarGroupContent,
+  SidebarMenuAction,
 } from "@/components/ui/sidebar"
-import { Library, LineChart, Activity, Sun, Palette } from "lucide-react"
+import { Library, LineChart, Activity, Sun, Palette, X } from "lucide-react"
+import { useAnalysisStore, useLibraryStore } from "@/lib/store"
+import { Input } from "@/components/ui/input"
+import { useEffect, useState } from "react"
+import { useSidebar } from "@/components/ui/sidebar"
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const { currentSPDs, aliases, removeCurrentSPD, setAlias } = useAnalysisStore()
+  const { getItem } = useLibraryStore()
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingText, setEditingText] = useState("")
+  const { setOpen } = useSidebar()
+
+  // Auto-expand sidebar when items get loaded
+  useEffect(() => {
+    if (currentSPDs.length > 0) {
+      setOpen(true)
+    }
+  }, [currentSPDs.length, setOpen])
 
   return (
     <Sidebar collapsible="icon">
@@ -69,6 +86,83 @@ export function AppSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Loaded Items Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel>
+            Loaded Items
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {currentSPDs.length === 0 ? (
+                <div className="text-xs text-muted-foreground px-2 py-1">
+                  No items loaded
+                </div>
+              ) : (
+                currentSPDs.map((id) => {
+                  const libItem = getItem(id)
+                  const defaultTitle = libItem?.title || id
+                  const displayTitle = aliases[id] || defaultTitle
+                  const isEditing = editingId === id
+                  return (
+                    <SidebarMenuItem key={id}>
+                      {isEditing ? (
+                        <div className="px-2 py-1">
+                          <Input
+                            value={editingText}
+                            onChange={(e) => setEditingText(e.target.value)}
+                            onBlur={() => {
+                              const trimmed = editingText.trim()
+                              if (trimmed && trimmed !== defaultTitle) setAlias(id, trimmed)
+                              if (!trimmed) setAlias(id, defaultTitle)
+                              setEditingId(null)
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                const trimmed = editingText.trim()
+                                if (trimmed && trimmed !== defaultTitle) setAlias(id, trimmed)
+                                if (!trimmed) setAlias(id, defaultTitle)
+                                setEditingId(null)
+                              }
+                              if (e.key === 'Escape') {
+                                setEditingId(null)
+                              }
+                            }}
+                            className="h-7 text-xs"
+                            autoFocus
+                          />
+                        </div>
+                      ) : (
+                        <SidebarMenuButton
+                          asChild
+                          tooltip={displayTitle}
+                        >
+                          <Link href="/spd" onDoubleClick={(e) => {
+                            e.preventDefault()
+                            setEditingId(id)
+                            setEditingText(displayTitle)
+                          }}>
+                            <LineChart className="h-4 w-4" />
+                            <span className="truncate" title={displayTitle}>{displayTitle}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      )}
+                      {!isEditing && (
+                        <SidebarMenuAction
+                          title="Unload"
+                          onClick={() => removeCurrentSPD(id)}
+                          aria-label={`Unload ${displayTitle}`}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </SidebarMenuAction>
+                      )}
+                    </SidebarMenuItem>
+                  )
+                })
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
