@@ -14,7 +14,7 @@ import {
   SidebarGroupContent,
   SidebarMenuAction,
 } from "@/components/ui/sidebar"
-import { Library, LineChart, Activity, BarChart3, Palette, X, GripVertical, Pencil } from "lucide-react"
+import { Library, LineChart, Activity, BarChart3, Palette, X, GripVertical, Pencil, Eye, EyeOff } from "lucide-react"
 import { useAnalysisStore, useLibraryStore } from "@/lib/store"
 import { Input } from "@/components/ui/input"
 import { useEffect, useState } from "react"
@@ -27,14 +27,14 @@ import {
 
 export function AppSidebar() {
   const pathname = usePathname()
-  const { currentSPDs, aliases, spdColors, removeCurrentSPD, setAlias, setSpdColor, reorderCurrentSPDs } = useAnalysisStore()
+  const { currentSPDs, aliases, spdColors, visibleSPDs, removeCurrentSPD, setAlias, setSpdColor, reorderCurrentSPDs, toggleSpdVisibility } = useAnalysisStore()
   const { getItem } = useLibraryStore()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingText, setEditingText] = useState("")
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [colorPickerOpen, setColorPickerOpen] = useState<string | null>(null)
-  const { setOpen } = useSidebar()
+  const { setOpen, state } = useSidebar()
 
   // Auto-expand sidebar when items get loaded
   useEffect(() => {
@@ -46,7 +46,7 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b px-6 py-3">
-        <h1 className="text-base font-normal group-data-[collapsible=icon]:hidden">Beautiful Photometry</h1>
+        <h1 className="text-base font-normal sidebar-text" style={{ display: state === 'collapsed' ? 'none' : 'block' }}>Beautiful Photometry</h1>
       </SidebarHeader>
       <SidebarContent>
         {/* Library Section */}
@@ -56,7 +56,7 @@ export function AppSidebar() {
               <SidebarMenuButton asChild isActive={pathname === "/library" || pathname === "/"}>
                 <Link href="/library">
                   <Library className="h-4 w-4" />
-                  <span>Library</span>
+                  <span className="sidebar-text" style={{ display: state === 'collapsed' ? 'none' : 'inline' }}>Library</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -65,13 +65,13 @@ export function AppSidebar() {
 
         {/* Loaded Items Section - moved right after Library */}
         <SidebarGroup>
-          <SidebarGroupLabel>
+          <SidebarGroupLabel className="sidebar-text" style={{ display: state === 'collapsed' ? 'none' : 'flex' }}>
             Loaded Items
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {currentSPDs.length === 0 ? (
-                <div className="text-xs text-muted-foreground px-2 py-1">
+                <div className="text-xs text-muted-foreground px-2 py-1" style={{ display: state === 'collapsed' ? 'none' : 'block' }}>
                   No items loaded
                 </div>
               ) : (
@@ -81,6 +81,7 @@ export function AppSidebar() {
                   const displayTitle = aliases[id] || defaultTitle
                   const isEditing = editingId === id
                   const itemColor = spdColors[id] || '#808080'
+                  const isVisible = visibleSPDs[id] ?? true
                   
                   const handleDragStart = (e: React.DragEvent) => {
                     setDraggedIndex(index)
@@ -146,64 +147,112 @@ export function AppSidebar() {
                             tooltip={displayTitle}
                           >
                             <div className="flex items-center gap-2 w-full">
-                              {hoveredId === id && (
+                              {/* Order: Drag icon, Color picker, Show/hide, Name */}
+                              {hoveredId === id && state !== 'collapsed' && (
                                 <GripVertical className="h-4 w-4 cursor-move flex-shrink-0" />
                               )}
-                              <Popover open={colorPickerOpen === id} onOpenChange={(open) => setColorPickerOpen(open ? id : null)}>
-                                <PopoverTrigger asChild>
+                              
+                              {/* Color picker - always visible, clickable when hovered */}
+                              {hoveredId === id && state !== 'collapsed' ? (
+                                <Popover open={colorPickerOpen === id} onOpenChange={(open) => setColorPickerOpen(open ? id : null)}>
+                                  <PopoverTrigger asChild>
+                                    <button
+                                      className="h-4 w-4 rounded border border-border hover:scale-110 transition-transform flex-shrink-0"
+                                      style={{ backgroundColor: itemColor }}
+                                      title="Change color"
+                                      onClick={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        setColorPickerOpen(colorPickerOpen === id ? null : id)
+                                      }}
+                                    />
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-64 p-3" align="start">
+                                    <div className="space-y-2">
+                                      <p className="text-sm font-medium">Choose a color</p>
+                                      <div className="flex flex-wrap gap-2">
+                                        {[
+                                          '#e74c3c', '#3498db', '#2ecc71', '#9b59b6',
+                                          '#f39c12', '#1abc9c', '#e67e22', '#16a085',
+                                          '#8e44ad', '#c0392b', '#27ae60', '#2980b9',
+                                          '#d35400', '#2c3e50', '#34495e', '#000000'
+                                        ].map(color => (
+                                          <button
+                                            key={color}
+                                            className="h-6 w-6 rounded border border-border hover:scale-110 transition-transform"
+                                            style={{ backgroundColor: color }}
+                                            onClick={() => {
+                                              setSpdColor(id, color)
+                                              setColorPickerOpen(null)
+                                            }}
+                                          />
+                                        ))}
+                                      </div>
+                                      <div className="flex gap-2 items-center">
+                                        <Input
+                                          type="color"
+                                          value={itemColor}
+                                          onChange={(e) => setSpdColor(id, e.target.value)}
+                                          className="h-8 w-20 p-1"
+                                        />
+                                        <Input
+                                          type="text"
+                                          value={itemColor}
+                                          onChange={(e) => setSpdColor(id, e.target.value)}
+                                          className="h-8 flex-1"
+                                          placeholder="#000000"
+                                        />
+                                      </div>
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
+                              ) : (
+                                // When not hovered, show color square or eye-off icon
+                                !isVisible ? (
                                   <button
-                                    className="h-4 w-4 rounded border border-border hover:scale-110 transition-transform flex-shrink-0"
-                                    style={{ backgroundColor: itemColor }}
-                                    title="Change color"
+                                    className="h-4 w-4 flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                                    title={`Show ${displayTitle}`}
                                     onClick={(e) => {
                                       e.preventDefault()
                                       e.stopPropagation()
-                                      setColorPickerOpen(colorPickerOpen === id ? null : id)
+                                      toggleSpdVisibility(id)
+                                    }}
+                                  >
+                                    <EyeOff className="h-4 w-4" />
+                                  </button>
+                                ) : (
+                                  <button
+                                    className="h-4 w-4 rounded border border-border flex-shrink-0"
+                                    style={{ backgroundColor: itemColor }}
+                                    title={`${displayTitle} color`}
+                                    onClick={(e) => {
+                                      e.preventDefault()
+                                      e.stopPropagation()
                                     }}
                                   />
-                                </PopoverTrigger>
-                                <PopoverContent className="w-64 p-3" align="start">
-                                  <div className="space-y-2">
-                                    <p className="text-sm font-medium">Choose a color</p>
-                                    <div className="flex flex-wrap gap-2">
-                                      {[
-                                        '#e74c3c', '#3498db', '#2ecc71', '#9b59b6',
-                                        '#f39c12', '#1abc9c', '#e67e22', '#16a085',
-                                        '#8e44ad', '#c0392b', '#27ae60', '#2980b9',
-                                        '#d35400', '#2c3e50', '#34495e', '#000000'
-                                      ].map(color => (
-                                        <button
-                                          key={color}
-                                          className="h-6 w-6 rounded border border-border hover:scale-110 transition-transform"
-                                          style={{ backgroundColor: color }}
-                                          onClick={() => {
-                                            setSpdColor(id, color)
-                                            setColorPickerOpen(null)
-                                          }}
-                                        />
-                                      ))}
-                                    </div>
-                                    <div className="flex gap-2 items-center">
-                                      <Input
-                                        type="color"
-                                        value={itemColor}
-                                        onChange={(e) => setSpdColor(id, e.target.value)}
-                                        className="h-8 w-20 p-1"
-                                      />
-                                      <Input
-                                        type="text"
-                                        value={itemColor}
-                                        onChange={(e) => setSpdColor(id, e.target.value)}
-                                        className="h-8 flex-1"
-                                        placeholder="#000000"
-                                      />
-                                    </div>
-                                  </div>
-                                </PopoverContent>
-                              </Popover>
+                                )
+                              )}
+                              
+                              {/* Show/hide button when hovered */}
+                              {hoveredId === id && state !== 'collapsed' && (
+                                <button
+                                  className="h-4 w-4 flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                                  title={isVisible ? "Hide" : "Show"}
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    toggleSpdVisibility(id)
+                                  }}
+                                >
+                                  {isVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                                </button>
+                              )}
+                              
+                              {/* Name */}
                               <Link 
                                 href="/spd" 
-                                className="flex items-center flex-1 min-w-0"
+                                className="flex items-center flex-1 min-w-0 sidebar-text"
+                                style={{ display: state === 'collapsed' ? 'none' : 'flex' }}
                                 onDoubleClick={(e) => {
                                   e.preventDefault()
                                   setEditingId(id)
@@ -214,7 +263,9 @@ export function AppSidebar() {
                               </Link>
                             </div>
                           </SidebarMenuButton>
-                          {hoveredId === id && (
+                          
+                          {/* Pen and X buttons on the right when hovered */}
+                          {hoveredId === id && state !== 'collapsed' && (
                             <>
                               <SidebarMenuAction
                                 title="Rename"
@@ -248,7 +299,7 @@ export function AppSidebar() {
 
         {/* Photometrics Section */}
         <SidebarGroup>
-          <SidebarGroupLabel>
+          <SidebarGroupLabel className="sidebar-text" style={{ display: state === 'collapsed' ? 'none' : 'flex' }}>
             Photometrics
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -257,7 +308,7 @@ export function AppSidebar() {
                 <SidebarMenuButton asChild isActive={pathname === "/spd"}>
                   <Link href="/spd">
                     <LineChart className="h-4 w-4" />
-                    <span>SPD</span>
+                    <span className="sidebar-text" style={{ display: state === 'collapsed' ? 'none' : 'inline' }}>SPD</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -265,7 +316,7 @@ export function AppSidebar() {
                 <SidebarMenuButton asChild isActive={pathname === "/cri"}>
                   <Link href="/cri">
                     <Palette className="h-4 w-4" />
-                    <span>CRI</span>
+                    <span className="sidebar-text" style={{ display: state === 'collapsed' ? 'none' : 'inline' }}>CRI</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -273,7 +324,7 @@ export function AppSidebar() {
                 <SidebarMenuButton asChild isActive={pathname === "/tm30"}>
                   <Link href="/tm30">
                     <BarChart3 className="h-4 w-4" />
-                    <span>TM-30</span>
+                    <span className="sidebar-text" style={{ display: state === 'collapsed' ? 'none' : 'inline' }}>TM-30</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -283,7 +334,7 @@ export function AppSidebar() {
 
         {/* Temporal Section */}
         <SidebarGroup>
-          <SidebarGroupLabel>
+          <SidebarGroupLabel className="sidebar-text" style={{ display: state === 'collapsed' ? 'none' : 'flex' }}>
             Temporal
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -292,7 +343,7 @@ export function AppSidebar() {
                 <SidebarMenuButton asChild isActive={pathname === "/flicker"}>
                   <Link href="/flicker">
                     <Activity className="h-4 w-4" />
-                    <span>Flicker</span>
+                    <span className="sidebar-text" style={{ display: state === 'collapsed' ? 'none' : 'inline' }}>Flicker</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

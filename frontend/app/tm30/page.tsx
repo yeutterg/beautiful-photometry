@@ -29,21 +29,24 @@ export default function TM30Page() {
   const [exportHeight, setExportHeight] = useState(1080)
   const [showValues, setShowValues] = useState(true)
   const [previewMode, setPreviewMode] = useState(false)
-  const { currentSPDs, spdColors, aliases } = useAnalysisStore()
+  const { currentSPDs, visibleSPDs, spdColors, aliases } = useAnalysisStore()
   const { getItem } = useLibraryStore()
   const chartRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const fetchTM30Data = async () => {
-      if (currentSPDs.length === 0) {
+      // Filter to only visible SPDs
+      const visibleIds = currentSPDs.filter(id => visibleSPDs[id] !== false)
+      
+      if (visibleIds.length === 0) {
         setTm30Data([])
         return
       }
 
       setIsLoading(true)
       try {
-        const spds = currentSPDs.map(id => getItem(id)).filter(Boolean)
+        const spds = visibleIds.map(id => getItem(id)).filter(Boolean)
         if (spds.length === 0) {
           setIsLoading(false)
           return
@@ -112,7 +115,7 @@ export default function TM30Page() {
     }
 
     fetchTM30Data()
-  }, [currentSPDs, getItem, aliases])
+  }, [currentSPDs, visibleSPDs, getItem, aliases])
 
   const exportChart = async () => {
     if (!chartRef.current || tm30Data.length === 0) {
@@ -338,7 +341,7 @@ export default function TM30Page() {
                   data={tm30Data}
                   title="TM-30 Test Color Samples (99 CES)"
                   exportMode={false} 
-                  showValues={false} // Don't show values for 99 samples - too crowded
+                  showValues={showValues}
                   width={previewMode ? exportWidth : Math.max(3000, tm30MetricKeys.length * 35)}
                   height={previewMode ? exportHeight : 400}
                   colors={tm30Data.map(d => spdColors[d.id] || '#808080')}

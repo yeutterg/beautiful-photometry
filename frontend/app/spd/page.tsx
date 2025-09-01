@@ -26,7 +26,7 @@ function useDebounce<T>(value: T, delay: number): T {
 
 export default function PhotometricsPage() {
   const [isLoading, setIsLoading] = useState(false)
-  const { currentSPDs, analysisOptions, setResults, aliases, spdColors } = useAnalysisStore()
+  const { currentSPDs, visibleSPDs, analysisOptions, setResults, aliases, spdColors } = useAnalysisStore()
   const { getItem } = useLibraryStore()
   
   // Debounce the analysis options to prevent rapid re-renders
@@ -34,17 +34,21 @@ export default function PhotometricsPage() {
   const debouncedColors = useDebounce(spdColors, 300) // Debounce color changes
 
   const analyzeData = useCallback(async () => {
-    if (currentSPDs.length === 0) {
+    // Filter to only visible SPDs
+    const visibleIds = currentSPDs.filter(id => visibleSPDs[id] !== false)
+    
+    if (visibleIds.length === 0) {
       setResults(null)
       return
     }
 
     setIsLoading(true)
     try {
-      // Get SPD data from library
-      const spds = currentSPDs.map(id => getItem(id)).filter(Boolean)
+      // Get SPD data from library (only visible ones)
+      const spds = visibleIds.map(id => getItem(id)).filter(Boolean)
       console.log('=== PHOTOMETRICS ANALYSIS ===')
       console.log('Current SPD IDs:', currentSPDs)
+      console.log('Visible SPD IDs:', visibleIds)
       console.log('Retrieved SPDs:', spds.map(s => ({ id: s?.id, title: s?.title })))
       console.log('Full SPD details:', spds)
       if (spds.length === 0) {
@@ -109,14 +113,14 @@ export default function PhotometricsPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [currentSPDs, debouncedOptions, getItem, setResults, aliases, debouncedColors])
+  }, [currentSPDs, visibleSPDs, debouncedOptions, getItem, setResults, aliases, debouncedColors])
 
-  // Auto-update when SPDs or debounced options change
+  // Auto-update when SPDs, visibility, or debounced options change
   useEffect(() => {
     if (currentSPDs.length > 0) {
       analyzeData()
     }
-  }, [currentSPDs, debouncedOptions, analyzeData])
+  }, [currentSPDs, visibleSPDs, debouncedOptions, analyzeData])
   // Show a message if no SPDs are selected
   if (currentSPDs.length === 0) {
     return (

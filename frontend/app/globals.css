@@ -3,6 +3,56 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Sidebar width variables */
+:root {
+  --sidebar-width: 16rem;
+  --sidebar-width-icon: 3rem;
+}
+
+/* Sidebar collapse styles - Direct width values */
+[data-slot="sidebar-gap"] {
+  width: 16rem !important;
+}
+
+[data-state="collapsed"] [data-slot="sidebar-gap"],
+[data-collapsible="icon"] [data-slot="sidebar-gap"] {
+  width: 3rem !important;
+}
+
+[data-slot="sidebar-container"] {
+  width: 16rem !important;
+}
+
+[data-state="collapsed"] [data-slot="sidebar-container"],
+[data-collapsible="icon"] [data-slot="sidebar-container"] {
+  width: 3rem !important;
+}
+
+/* Hide sidebar content when collapsed */
+[data-state="collapsed"] .sidebar-text,
+[data-collapsible="icon"] .sidebar-text {
+  display: none !important;
+}
+
+/* Keep buttons visible but adjust layout */
+[data-state="collapsed"] [data-sidebar="sidebar"],
+[data-collapsible="icon"] [data-sidebar="sidebar"] {
+  overflow: hidden;
+}
+
+/* Hide group labels when collapsed */
+[data-state="collapsed"] [data-sidebar="group-label"],
+[data-collapsible="icon"] [data-sidebar="group-label"] {
+  opacity: 0;
+  margin-top: -2rem;
+}
+
+/* Adjust menu actions when collapsed */
+[data-state="collapsed"] [data-sidebar="menu-action"],
+[data-collapsible="icon"] [data-sidebar="menu-action"] {
+  display: none;
+}
+
 /* Force black text when exporting */
 .exporting {
   background-color: #ffffff !important;

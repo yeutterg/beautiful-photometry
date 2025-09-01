@@ -43,21 +43,24 @@ export default function CRIPage() {
   const [exportHeight, setExportHeight] = useState(1080)
   const [showValues, setShowValues] = useState(true)
   const [previewMode, setPreviewMode] = useState(false)
-  const { currentSPDs, spdColors } = useAnalysisStore()
+  const { currentSPDs, visibleSPDs, spdColors } = useAnalysisStore()
   const { getItem } = useLibraryStore()
   const chartRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const fetchCRIData = async () => {
-      if (currentSPDs.length === 0) {
+      // Filter to only visible SPDs
+      const visibleIds = currentSPDs.filter(id => visibleSPDs[id] !== false)
+      
+      if (visibleIds.length === 0) {
         setCriData([])
         return
       }
 
       setIsLoading(true)
       try {
-        const spds = currentSPDs.map(id => getItem(id)).filter(Boolean)
+        const spds = visibleIds.map(id => getItem(id)).filter(Boolean)
         if (spds.length === 0) {
           setIsLoading(false)
           return
@@ -97,7 +100,7 @@ export default function CRIPage() {
     }
 
     fetchCRIData()
-  }, [currentSPDs, getItem])
+  }, [currentSPDs, visibleSPDs, getItem])
 
   const exportChart = async () => {
     if (!chartRef.current || criData.length === 0) {
