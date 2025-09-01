@@ -14,7 +14,7 @@ import {
   SidebarGroupContent,
   SidebarMenuAction,
 } from "@/components/ui/sidebar"
-import { Library, LineChart, Activity, Sun, Palette, X, GripVertical, Pencil } from "lucide-react"
+import { Library, LineChart, Activity, BarChart3, Palette, X, GripVertical, Pencil } from "lucide-react"
 import { useAnalysisStore, useLibraryStore } from "@/lib/store"
 import { Input } from "@/components/ui/input"
 import { useEffect, useState } from "react"
@@ -272,7 +272,7 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname === "/tm30"}>
                   <Link href="/tm30">
-                    <Sun className="h-4 w-4" />
+                    <BarChart3 className="h-4 w-4" />
                     <span>TM-30</span>
                   </Link>
                 </SidebarMenuButton>

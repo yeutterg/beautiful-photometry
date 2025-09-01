@@ -2,53 +2,43 @@
 
 import { useState } from "react"
 import { Bar, BarChart, CartesianGrid, Cell, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
-import { CRI_COLORS } from "@/lib/cri-constants"
 import { Pencil } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 
-interface CRIData {
+interface MetricData {
   id: string
   name: string
-  values: {
-    ra?: number
-    r1?: number
-    r2?: number
-    r3?: number
-    r4?: number
-    r5?: number
-    r6?: number
-    r7?: number
-    r8?: number
-    r9?: number
-    r10?: number
-    r11?: number
-    r12?: number
-    r13?: number
-    r14?: number
-    r15?: number
-  }
+  values: Record<string, number | undefined>
 }
 
-interface CRIBarChartProps {
-  data: CRIData[]
+interface MetricBarChartProps {
+  data: MetricData[]
   title?: string
   exportMode?: boolean
   showValues?: boolean
   width?: number
   height?: number
   colors?: string[]
+  barColors?: Record<string, string> // Colors for individual bars (like CRI R-values)
+  yDomain?: [number, number]
+  metricKeys: string[] // Keys to display (e.g., ['ra', 'r1', 'r2', ...] or ['Rf', 'h01', 'h02', ...])
+  formatXLabel?: (key: string) => string // Format function for X-axis labels
 }
 
-export function CRIBarChart({ 
+export function MetricBarChart({ 
   data, 
-  title = "Color Rendering Index",
+  title = "Metrics",
   exportMode = false,
   showValues: showValuesProp = true,
   width,
   height = 400,
-  colors
-}: CRIBarChartProps) {
+  colors,
+  barColors,
+  yDomain = [0, 100],
+  metricKeys,
+  formatXLabel = (key) => key.toUpperCase()
+}: MetricBarChartProps) {
   const showValues = showValuesProp
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [chartTitle, setChartTitle] = useState(title)
@@ -63,14 +53,13 @@ export function CRIBarChart({
   }
 
   // Transform data for grouped bar chart
-  const chartData = ['ra', 'r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7', 'r8', 'r9', 'r10', 'r11', 'r12', 'r13', 'r14', 'r15'].map(key => {
+  const chartData = metricKeys.map(key => {
     const dataPoint: Record<string, string | number> = { 
-      name: key === 'ra' ? 'Ra' : key.toUpperCase().replace('R', 'R'),
-      criKey: key
+      name: formatXLabel(key),
+      metricKey: key
     }
     data.forEach((dataset, index) => {
-      const value = dataset.values[key as keyof typeof dataset.values]
-      // Keep the value as is if it's a valid number (including 0), otherwise default to 0
+      const value = dataset.values[key]
       dataPoint[`dataset${index}`] = value !== undefined && value !== null ? Math.round(value) : 0
     })
     return dataPoint
@@ -186,7 +175,7 @@ export function CRIBarChart({
             stroke={exportMode ? "#000000" : "currentColor"}
           />
           <YAxis 
-            domain={[0, 100]}
+            domain={yDomain}
             tick={{ fontSize: 12, fill: exportMode ? "#000000" : "currentColor" }}
             stroke={exportMode ? "#000000" : "currentColor"}
           />
@@ -201,11 +190,11 @@ export function CRIBarChart({
               name={dataset.name}
               label={showValues ? { position: "top", fontSize: 10, fill: exportMode ? "#000000" : "currentColor" } : undefined}
             >
-              {/* Apply CRI colors to each bar segment */}
+              {/* Apply colors to each bar segment if provided */}
               {chartData.map((entry, index) => (
                 <Cell 
                   key={`cell-${index}`}
-                  fill={CRI_COLORS[entry.criKey as keyof typeof CRI_COLORS]}
+                  fill={barColors?.[entry.metricKey as string] || (colors?.[datasetIndex] || '#808080')}
                 />
               ))}
             </Bar>

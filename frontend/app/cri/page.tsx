@@ -43,7 +43,7 @@ export default function CRIPage() {
   const [exportHeight, setExportHeight] = useState(1080)
   const [showValues, setShowValues] = useState(true)
   const [previewMode, setPreviewMode] = useState(false)
-  const { currentSPDs } = useAnalysisStore()
+  const { currentSPDs, spdColors } = useAnalysisStore()
   const { getItem } = useLibraryStore()
   const chartRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<HTMLDivElement>(null)
@@ -403,6 +403,7 @@ export default function CRIPage() {
                 showValues={showValues}
                 width={previewMode ? exportWidth : undefined}
                 height={previewMode ? exportHeight : undefined}
+                colors={criData.map(d => spdColors[d.id] || '#808080')}
               />
             </div>
           </>

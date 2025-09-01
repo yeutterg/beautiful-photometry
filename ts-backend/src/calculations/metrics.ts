@@ -1,6 +1,7 @@
 import { SpectralData, Metrics } from '../types/spectrum';
 import { CIE_X, CIE_Y, CIE_Z, V_LAMBDA, V_PRIME_LAMBDA, MELANOPIC } from '../data/cie-data';
 import { calculateCRICIE } from './cri-cie';
+import { calculateTM30 } from './tm30';
 
 // Helper function to interpolate SPD to standard wavelengths
 export function interpolateSPD(spd: SpectralData, targetWavelengths: number[]): number[] {
@@ -244,6 +245,7 @@ export function calculateAllMetrics(name: string, spd: SpectralData): Metrics {
   try {
     const cct = calculateCCT(spd);
     const criResults = calculateCRICIE(spd);
+    const tm30Results = calculateTM30(spd);
     
     return {
       name,
@@ -252,8 +254,9 @@ export function calculateAllMetrics(name: string, spd: SpectralData): Metrics {
       cri: criResults.Ra,
       criValues: criResults,
       r9: criResults.R9,
-      rf: undefined, // TM-30 Rf not yet implemented
-      rg: undefined, // TM-30 Rg not yet implemented
+      rf: tm30Results.Rf,
+      rg: tm30Results.Rg,
+      tm30: tm30Results,
       melanopicRatio: calculateMelanopicRatio(spd),
       melanopicResponse: calculateMelanopicResponse(spd),
       scotopicPhotopicRatio: calculateSPRatio(spd),
@@ -272,7 +275,8 @@ export function calculateAllMetrics(name: string, spd: SpectralData): Metrics {
       criValues: undefined,
       r9: undefined,
       rf: undefined,
-      rg: undefined
+      rg: undefined,
+      tm30: undefined
     };
   }
 }
