@@ -395,7 +395,7 @@ Plots multiple SPDs
 def plot_multi_spectrum(
         spds, figsize=(8,4), filename=None, ylabel='Intensity', hideyaxis=False, suppress=False, title=None,
         xlim=(360,780), xtick=30, ytick=0.2, melanopic_curve=False,
-        colorbar=True, showlegend=True, legend_loc='upper left', line_weight=0.5
+        colorbar=True, showlegend=True, legend_loc='upper left', line_weight=0.5, colors=None
     ):
     # TODO fix non-colorbar display
 
@@ -429,7 +429,7 @@ def plot_multi_spectrum(
 
     # get the SPD values and plot
     legend_vals = []
-    for spd in spds:    
+    for i, spd in enumerate(spds):    
         values = spd.values
         spd_wls = spd.wavelengths
 
@@ -445,7 +445,11 @@ def plot_multi_spectrum(
             values = values[arr_start:arr_end+1]
 
         legend_vals.append(spd.name)
-        ax0.plot(wavelengths, values, linewidth=line_weight)
+        # Use provided color if available, otherwise use matplotlib's default color cycle
+        if colors and i < len(colors):
+            ax0.plot(wavelengths, values, linewidth=line_weight, color=colors[i])
+        else:
+            ax0.plot(wavelengths, values, linewidth=line_weight)
 
     # show the legend
     if showlegend:

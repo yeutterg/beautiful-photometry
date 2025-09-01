@@ -19,7 +19,6 @@ import { useAnalysisStore, useLibraryStore } from "@/lib/store"
 import { Input } from "@/components/ui/input"
 import { useEffect, useState } from "react"
 import { useSidebar } from "@/components/ui/sidebar"
-import { toast } from "sonner"
 import {
   Popover,
   PopoverContent,
@@ -168,10 +167,10 @@ export function AppSidebar() {
                                     <p className="text-sm font-medium">Choose a color</p>
                                     <div className="flex flex-wrap gap-2">
                                       {[
-                                        '#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24',
-                                        '#6c5ce7', '#fd79a8', '#00b894', '#fdcb6e',
-                                        '#a29bfe', '#fab1a0', '#e17055', '#74b9ff',
-                                        '#55efc4', '#ffeaa7', '#ff7675', '#636e72'
+                                        '#e74c3c', '#3498db', '#2ecc71', '#9b59b6',
+                                        '#f39c12', '#1abc9c', '#e67e22', '#16a085',
+                                        '#8e44ad', '#c0392b', '#27ae60', '#2980b9',
+                                        '#d35400', '#2c3e50', '#34495e', '#000000'
                                       ].map(color => (
                                         <button
                                           key={color}

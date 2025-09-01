@@ -429,6 +429,10 @@ def compare_spectra():
         spd_line_color = data.get('spd_line_color', '#000000')
         spd_line_weight = float(data.get('spd_line_weight', 0.5))
         
+        # Get colors from request
+        spd_colors = data.get('spd_colors', None)
+        colors = data.get('colors', None)  # Fallback
+        
         # Create comparison plot
         plot_options = {
             'spds': spds,
@@ -438,7 +442,8 @@ def compare_spectra():
             'hideyaxis': data.get('hideyaxis', False),
             'showlegend': data.get('show_legend', True),
             'legend_loc': data.get('legend_loc', 'upper left'),
-            'line_weight': spd_line_weight
+            'line_weight': spd_line_weight,
+            'colors': spd_colors or colors  # Pass colors to plot function
         }
         
         # Only add title if it's explicitly provided

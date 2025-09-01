@@ -23,7 +23,7 @@ export function DataLibrary() {
     filepath?: string
   }>>([])
   const [loading, setLoading] = useState(true)
-  const { setCurrentSPDs, addCurrentSPDs } = useAnalysisStore()
+  const { addCurrentSPDs } = useAnalysisStore()
   const { addItemWithId, items, clearItems } = useLibraryStore()
   const [forceRefresh, setForceRefresh] = useState(0)
   const [activeTab, setActiveTab] = useState("all")
