@@ -4,6 +4,10 @@ import { useState, useEffect, useRef } from "react"
 import { Card } from "@/components/ui/card"
 import { MetricBarChart } from "@/components/shared/metric-bar-chart"
 import { TM30Table } from "@/components/tm30/tm30-table"
+import { TM30Metrics } from "@/components/tm30/tm30-metrics"
+import { TM30HueChart } from "@/components/tm30/tm30-hue-chart"
+import { TM30ColorVectorGraphic } from "@/components/tm30/tm30-color-vector-graphic"
+import { TM30AnnulusPlot } from "@/components/tm30/tm30-annulus-plot"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useAnalysisStore, useLibraryStore } from "@/lib/store"
 import { Loader2, Download } from "lucide-react"
@@ -20,6 +24,9 @@ interface TM30Data {
   id: string
   name: string
   values: Record<string, number | undefined> // Dynamic to handle all 99 TCS values
+  rf?: number
+  rg?: number
+  rfHue?: Record<string, number | undefined> // Rf values by hue angle bin
 }
 
 export default function TM30Page() {
@@ -86,6 +93,7 @@ export default function TM30Page() {
             } | null;
           }) => {
             const values: TM30Data['values'] = {}
+            const rfHue: TM30Data['rfHue'] = {}
             
             // Use the individual TCS values from the backend
             if (spdResult.tm30 && spdResult.tm30.TCS) {
@@ -94,10 +102,20 @@ export default function TM30Page() {
               })
             }
             
+            // Extract Rf_hue values if available
+            if (spdResult.tm30 && spdResult.tm30.Rf_hue) {
+              Object.keys(spdResult.tm30.Rf_hue).forEach((hueKey: string) => {
+                rfHue[hueKey] = spdResult.tm30!.Rf_hue![hueKey]
+              })
+            }
+            
             return {
               id: spdResult.id,
               name: spdResult.name,
-              values
+              values,
+              rf: spdResult.tm30?.Rf,
+              rg: spdResult.tm30?.Rg,
+              rfHue
             }
           })
 
@@ -249,10 +267,66 @@ export default function TM30Page() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      {/* Bar Chart */}
+      {/* TM-30 Color Graphics */}
+      {!isLoading && tm30Data.length > 0 && (
+        <div className="space-y-6">
+          {tm30Data.map(d => (
+            <div key={d.id} className="space-y-4">
+              <h3 className="text-lg font-semibold">{d.name}</h3>
+              <div className="grid gap-6 lg:grid-cols-2">
+                <TM30ColorVectorGraphic
+                  data={{
+                    rf: d.rf || 0,
+                    rg: d.rg || 100,
+                    rfHue: d.rfHue
+                  }}
+                  width={400}
+                  height={400}
+                />
+                <TM30AnnulusPlot
+                  data={{
+                    rf: d.rf || 0,
+                    rg: d.rg || 100
+                  }}
+                  width={300}
+                  height={300}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Rf and Rg Metrics */}
+      {!isLoading && tm30Data.length > 0 && (
+        <TM30Metrics 
+          data={tm30Data.map(d => ({
+            id: d.id,
+            name: d.name,
+            rf: d.rf,
+            rg: d.rg,
+            color: spdColors[d.id] || '#808080'
+          }))}
+        />
+      )}
+
+      {/* Rf by Hue Angle Chart */}
+      {!isLoading && tm30Data.length > 0 && tm30Data.some(d => d.rfHue && Object.keys(d.rfHue).length > 0) && (
+        <TM30HueChart
+          data={tm30Data.map(d => ({
+            id: d.id,
+            name: d.name,
+            values: d.rfHue || {}
+          }))}
+          showValues={showValues}
+          colors={tm30Data.map(d => spdColors[d.id] || '#808080')}
+        />
+      )}
+
+      {/* TCS Bar Chart */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">TM-30 Chart</h2>
+          <h2 className="text-xl font-semibold">TM-30 Test Color Samples (TCS)</h2>
           <div className="flex items-center gap-4 export-controls">
             {isLoading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
             {!isLoading && tm30Data.length > 0 && (

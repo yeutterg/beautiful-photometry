@@ -13,7 +13,7 @@ export function PageTitle() {
       case "/cri":
         return "Color Rendering Index"
       case "/tm30":
-        return "TM-30"
+        return "TM-30-15"
       case "/flicker":
         return "Flicker"
       case "/library":
