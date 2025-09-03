@@ -408,14 +408,37 @@ function calculateChromaticity(X: number, Y: number, Z: number): { u: number; v:
 function getReferenceIlluminant(cct: number): SpectralData {
   const spd: SpectralData = {};
   
-  // Planckian radiator formula
-  const c1 = 3.74183e-16; // 2πhc²
-  const c2 = 1.4388e-2; // hc/k
-  
-  for (let wl = 380; wl <= 780; wl += 5) {
-    const wavelengthM = wl * 1e-9;
-    const power = c1 / (Math.pow(wavelengthM, 5) * (Math.exp(c2 / (wavelengthM * cct)) - 1));
-    spd[wl] = power;
+  if (cct < 5000) {
+    // Use Planckian radiator for CCT < 5000K
+    const c1 = 3.74183e-16; // 2πhc²
+    const c2 = 1.4388e-2; // hc/k
+    
+    for (let wl = 380; wl <= 780; wl += 5) {
+      const wavelengthM = wl * 1e-9;
+      const power = c1 / (Math.pow(wavelengthM, 5) * (Math.exp(c2 / (wavelengthM * cct)) - 1));
+      spd[wl] = power;
+    }
+  } else {
+    // Use D-series illuminant for CCT >= 5000K
+    // Simplified D-illuminant calculation
+    const xD = cct <= 7000 ? 
+      -4.6070e9 / Math.pow(cct, 3) + 2.9678e6 / Math.pow(cct, 2) + 0.09911e3 / cct + 0.244063 :
+      -2.0064e9 / Math.pow(cct, 3) + 1.9018e6 / Math.pow(cct, 2) + 0.24748e3 / cct + 0.237040;
+    
+    const yD = -3.000 * xD * xD + 2.870 * xD - 0.275;
+    
+    // Generate D-illuminant SPD (simplified)
+    for (let wl = 380; wl <= 780; wl += 5) {
+      // Simplified D-illuminant spectral distribution
+      const S0 = 1.0; // Simplified S0, S1, S2 components
+      const S1 = (wl - 560) / 100;
+      const S2 = Math.pow((wl - 560) / 100, 2);
+      
+      const M1 = (-1.3515 - 1.7703 * xD + 5.9114 * yD) / (0.0241 + 0.2562 * xD - 0.7341 * yD);
+      const M2 = (0.0300 - 31.4424 * xD + 30.0717 * yD) / (0.0241 + 0.2562 * xD - 0.7341 * yD);
+      
+      spd[wl] = S0 + M1 * S1 + M2 * S2;
+    }
   }
   
   // Normalize
@@ -433,24 +456,72 @@ function chromaticAdaptation(
   targetWhite: { u: number; v: number },
   color: { u: number; v: number }
 ): { u: number; v: number } {
-  // Simplified Von Kries transformation
-  const du = targetWhite.u - sourceWhite.u;
-  const dv = targetWhite.v - sourceWhite.v;
-  
-  return {
-    u: color.u + du,
-    v: color.v + dv
-  };
+  try {
+    // Von Kries transformation per CIE 13.3-1995
+    const c = (4 - sourceWhite.u - 10 * sourceWhite.v) / sourceWhite.v;
+    const d = (1.708 * sourceWhite.v + 0.404 - 1.481 * sourceWhite.u) / sourceWhite.v;
+    
+    const c_ref = (4 - targetWhite.u - 10 * targetWhite.v) / targetWhite.v;
+    const d_ref = (1.708 * targetWhite.v + 0.404 - 1.481 * targetWhite.u) / targetWhite.v;
+    
+    // Check for division by zero
+    if (!isFinite(c) || !isFinite(d) || !isFinite(c_ref) || !isFinite(d_ref)) {
+      console.warn('Invalid chromatic adaptation parameters, using simplified method');
+      // Simplified adaptation
+      return {
+        u: color.u + (targetWhite.u - sourceWhite.u),
+        v: color.v + (targetWhite.v - sourceWhite.v)
+      };
+    }
+    
+    // Transform color
+    const denominator = 16.518 + 1.481 * c_ref / c * color.u - d_ref / d * color.v;
+    if (Math.abs(denominator) < 0.0001) {
+      console.warn('Near-zero denominator in chromatic adaptation');
+      return color;
+    }
+    
+    const u_k = (10.872 + 0.404 * c_ref / c * color.u - 4 * d_ref / d * color.v) / denominator;
+    const v_k = 5.520 / denominator;
+    
+    return { u: u_k, v: v_k };
+  } catch (error) {
+    console.error('Error in chromatic adaptation:', error);
+    return color;
+  }
 }
 
-// Calculate color difference ΔE
+// Convert to CIE 1964 W*U*V* color space
+function uvToWUV(u: number, v: number, Y: number): { W: number; U: number; V: number } {
+  // W* = 25 * Y^(1/3) - 17
+  const W = 25 * Math.pow(Y, 1/3) - 17;
+  
+  // Reference white in 1960 UCS (for equal energy white E)
+  // For proper calculation, use the reference illuminant's u,v
+  const u_n = 0.2009;  // Reference illuminant u
+  const v_n = 0.3073;  // Reference illuminant v
+  
+  // U* = 13 * W* * (u - u_n)
+  // V* = 13 * W* * (v - v_n)
+  const U = 13 * W * (u - u_n);
+  const V = 13 * W * (v - v_n);
+  
+  return { W, U, V };
+}
+
+// Calculate color difference ΔE in CIE 1964 W*U*V*
 function calculateColorDifference(
-  color1: { u: number; v: number },
-  color2: { u: number; v: number }
+  testColor: { u: number; v: number; Y: number },
+  refColor: { u: number; v: number; Y: number }
 ): number {
-  const du = color1.u - color2.u;
-  const dv = color1.v - color2.v;
-  return Math.sqrt(du * du + dv * dv) * 1000; // Scale for CRI
+  const test = uvToWUV(testColor.u, testColor.v, testColor.Y);
+  const ref = uvToWUV(refColor.u, refColor.v, refColor.Y);
+  
+  const dW = test.W - ref.W;
+  const dU = test.U - ref.U;
+  const dV = test.V - ref.V;
+  
+  return Math.sqrt(dW * dW + dU * dU + dV * dV);
 }
 
 // Calculate individual R value for a test color sample
@@ -465,10 +536,24 @@ function calculateRValue(
   let testX = 0, testY = 0, testZ = 0;
   let refX = 0, refY = 0, refZ = 0;
   
+  console.log('calculateRValue - testWhite:', testWhite, 'refWhite:', refWhite);
+  
+  // Calculate normalization factors for the illuminants (normalize to Y=100 for white)
+  let testNorm = 0, refNorm = 0;
+  for (let wl = 380; wl <= 780; wl += 5) {
+    testNorm += (testSpd[wl] || 0) * (CIE_Y[wl] || 0);
+    refNorm += (refSpd[wl] || 0) * (CIE_Y[wl] || 0);
+  }
+  
+  // Scale factors to normalize Y to 100
+  const testScale = 100 / testNorm;
+  const refScale = 100 / refNorm;
+  
+  // Calculate color under each illuminant
   for (let wl = 380; wl <= 780; wl += 5) {
     const reflectance = tcsReflectance[wl] || 0;
-    const testIntensity = (testSpd[wl] || 0) * reflectance;
-    const refIntensity = (refSpd[wl] || 0) * reflectance;
+    const testIntensity = (testSpd[wl] || 0) * testScale * reflectance;
+    const refIntensity = (refSpd[wl] || 0) * refScale * reflectance;
     
     testX += testIntensity * (CIE_X[wl] || 0);
     testY += testIntensity * (CIE_Y[wl] || 0);
@@ -482,15 +567,39 @@ function calculateRValue(
   const testColor = calculateChromaticity(testX, testY, testZ);
   const refColor = calculateChromaticity(refX, refY, refZ);
   
-  // Apply chromatic adaptation
-  const adaptedTestColor = chromaticAdaptation(testWhite, refWhite, testColor);
+  console.log('Test color:', testColor, 'Ref color:', refColor);
+  console.log('Test Y:', testY, 'Ref Y:', refY);
   
-  // Calculate color difference
-  const deltaE = calculateColorDifference(adaptedTestColor, refColor);
+  // Apply chromatic adaptation to test color
+  const adaptedTestColor = chromaticAdaptation(testWhite, refWhite, testColor);
+  console.log('Adapted test color:', adaptedTestColor);
+  
+  // Calculate color difference in W*U*V* space
+  const deltaE = calculateColorDifference(
+    { u: adaptedTestColor.u, v: adaptedTestColor.v, Y: testY },
+    { u: refColor.u, v: refColor.v, Y: refY }
+  );
+  
+  console.log('Delta E:', deltaE);
   
   // Calculate R value
   const R = 100 - 4.6 * deltaE;
+  console.log('R value before clamp:', R);
   return Math.max(0, Math.min(100, R));
+}
+
+// Create a deterministic hash of the SPD for debugging
+function hashSPD(spd: SpectralData): string {
+  const keys = Object.keys(spd).sort();
+  let sum = 0;
+  let count = 0;
+  for (const key of keys) {
+    const wavelength = parseFloat(key);
+    const value = spd[key] || spd[key.toString()] || 0;
+    sum += wavelength * value;
+    count++;
+  }
+  return `${sum.toFixed(6)}_${count}`;
 }
 
 // Main CRI calculation function
@@ -512,14 +621,23 @@ export function calculateCRI(spd: SpectralData): {
   R14: number;
   R15: number;
 } {
+  const spdHash = hashSPD(spd);
+  console.log('=== CRI CALCULATION START ===');
+  console.log('SPD Hash:', spdHash);
+  console.log('SPD wavelength count:', Object.keys(spd).length);
+  console.log('First 3 wavelengths:', Object.keys(spd).slice(0, 3).map(wl => `${wl}:${spd[wl]}`));
+  
   try {
     // Calculate CCT of test source
     const testXYZ = calculateXYZ(spd);
+    console.log('Test XYZ:', testXYZ);
     const testWhite = calculateChromaticity(testXYZ.X, testXYZ.Y, testXYZ.Z);
+    console.log('Test white point:', testWhite);
     
     // Estimate CCT (simplified)
     const n = (testWhite.u - 0.3320) / (0.1858 - testWhite.v);
     const cct = 437 * Math.pow(n, 3) + 3601 * Math.pow(n, 2) + 6861 * n + 5517;
+    console.log('CCT:', cct);
     
     // Get reference illuminant
     const refSpd = getReferenceIlluminant(cct);
@@ -527,7 +645,9 @@ export function calculateCRI(spd: SpectralData): {
     const refWhite = calculateChromaticity(refXYZ.X, refXYZ.Y, refXYZ.Z);
     
     // Calculate R values for all 15 test colors
+    console.log('Calculating R1...');
     const R1 = calculateRValue(spd, TCS_REFLECTANCE.TCS01, refSpd, testWhite, refWhite);
+    console.log('R1:', R1);
     const R2 = calculateRValue(spd, TCS_REFLECTANCE.TCS02, refSpd, testWhite, refWhite);
     const R3 = calculateRValue(spd, TCS_REFLECTANCE.TCS03, refSpd, testWhite, refWhite);
     const R4 = calculateRValue(spd, TCS_REFLECTANCE.TCS04, refSpd, testWhite, refWhite);
@@ -546,7 +666,7 @@ export function calculateCRI(spd: SpectralData): {
     // Calculate Ra (average of R1-R8)
     const Ra = (R1 + R2 + R3 + R4 + R5 + R6 + R7 + R8) / 8;
     
-    return {
+    const results = {
       Ra: Math.round(Ra),
       R1: Math.round(R1),
       R2: Math.round(R2),
@@ -564,8 +684,12 @@ export function calculateCRI(spd: SpectralData): {
       R14: Math.round(R14),
       R15: Math.round(R15)
     };
+    
+    console.log('CRI Results:', results);
+    console.log('=== CRI CALCULATION END (Hash: ' + spdHash + ') ===');
+    return results;
   } catch (error) {
-    console.error('Error calculating CRI:', error);
+    console.error('Error calculating CRI:', error, (error as any).stack);
     return {
       Ra: 0,
       R1: 0, R2: 0, R3: 0, R4: 0, R5: 0,

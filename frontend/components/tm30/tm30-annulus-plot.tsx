@@ -86,7 +86,6 @@ export function TM30AnnulusPlot({
     }
 
     // Draw Rf indicator (radial position)
-    const rfAngle = -Math.PI / 2 // Top position
     const rfRadius = innerRadius + (outerRadius - innerRadius) * (data.rf / 100)
     
     // Draw Rf line

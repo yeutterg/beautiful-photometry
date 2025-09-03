@@ -10,13 +10,35 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Download, Loader2 } from "lucide-react"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { Download, Loader2, Info } from "lucide-react"
 import { toast } from "sonner"
 import { useAnalysisStore, useLibraryStore } from "@/lib/store"
 import { api } from "@/lib/api"
 import Image from "next/image"
 
 import { useEffect, useState } from "react"
+
+// Metric descriptions for tooltips
+const METRIC_DESCRIPTIONS = {
+  CCT: "Correlated Color Temperature: The color appearance of the light source, measured in Kelvin (K). Lower values (2700-3000K) appear warm/yellow, higher values (5000-6500K) appear cool/blue.",
+  Duv: "Delta u,v: Distance from the black body locus in CIE 1960 color space. Positive values indicate a greenish tint, negative values indicate a pinkish/magenta tint.",
+  "CRI Ra": "Color Rendering Index (average): Measures how accurately the light source renders colors compared to a reference light. Scale 0-100, with higher values indicating better color rendering.",
+  R9: "CRI R9: Specific test for rendering of strong red colors. Important for skin tones and red objects. Often lower than Ra, values above 50 are considered good.",
+  "Rf (Fidelity)": "TM-30 Fidelity Index: Modern color rendering metric that uses 99 color samples. Scale 0-100, measures average color fidelity compared to reference.",
+  "Rg (Gamut)": "TM-30 Gamut Index: Measures color saturation/vividness. 100 = same as reference, >100 = increased saturation, <100 = decreased saturation.",
+  "Melanopic Ratio": "Ratio of melanopic to photopic response. Indicates the light's biological impact on circadian rhythms. Higher values = more biologically active light.",
+  "S/P Ratio": "Scotopic/Photopic Ratio: Compares sensitivity under low light (rod vision) vs normal light (cone vision). Higher values appear brighter in peripheral/night vision.",
+  "M/P Ratio": "Melanopic/Photopic Ratio: Similar to Melanopic Ratio, indicates circadian impact relative to visual brightness.",
+  "Blue %": "Percentage of visible light in the blue region. Calculated as: (intensity from 380-500nm) / (intensity from 380-780nm) × 100%. Only considers the visible spectrum range.",
+  "Peak Wavelength": "The wavelength with the highest intensity in the spectrum. Indicates the dominant color component of the light.",
+  "Dominant Wavelength": "The monochromatic wavelength that appears the same color as the light source when mixed with white. Represents perceived color."
+}
 
 interface MetricsData {
   id: string
@@ -250,7 +272,21 @@ export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
               </TableHeader>
               <TableBody>
                 <TableRow>
-                  <TableCell className="font-medium">CCT</TableCell>
+                  <TableCell className="font-medium">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1 cursor-help">
+                            CCT
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm">
+                          <p>{METRIC_DESCRIPTIONS.CCT}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
                   {metricsData.map((spd) => (
                     <TableCell key={spd.id}>
                       {spd.metrics.cct || '-'}
@@ -258,7 +294,21 @@ export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
                   ))}
                 </TableRow>
                 <TableRow>
-                  <TableCell className="font-medium">Duv</TableCell>
+                  <TableCell className="font-medium">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1 cursor-help">
+                            Duv
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm">
+                          <p>{METRIC_DESCRIPTIONS.Duv}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
                   {metricsData.map((spd) => (
                     <TableCell key={spd.id}>
                       {spd.metrics.duv !== undefined ? spd.metrics.duv.toFixed(4) : '-'}
@@ -266,7 +316,21 @@ export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
                   ))}
                 </TableRow>
                 <TableRow>
-                  <TableCell className="font-medium">CRI Ra</TableCell>
+                  <TableCell className="font-medium">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1 cursor-help">
+                            CRI Ra
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm">
+                          <p>{METRIC_DESCRIPTIONS["CRI Ra"]}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
                   {metricsData.map((spd) => (
                     <TableCell key={spd.id}>
                       {spd.metrics.cri !== undefined ? Math.round(spd.metrics.cri) : '-'}
@@ -274,7 +338,21 @@ export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
                   ))}
                 </TableRow>
                 <TableRow>
-                  <TableCell className="font-medium">R9</TableCell>
+                  <TableCell className="font-medium">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1 cursor-help">
+                            R9
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm">
+                          <p>{METRIC_DESCRIPTIONS.R9}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
                   {metricsData.map((spd) => (
                     <TableCell key={spd.id}>
                       {spd.metrics.r9 !== undefined ? Math.round(spd.metrics.r9) : '-'}
@@ -282,7 +360,21 @@ export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
                   ))}
                 </TableRow>
                 <TableRow>
-                  <TableCell className="font-medium">Rf (Fidelity)</TableCell>
+                  <TableCell className="font-medium">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1 cursor-help">
+                            Rf (Fidelity)
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm">
+                          <p>{METRIC_DESCRIPTIONS["Rf (Fidelity)"]}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
                   {metricsData.map((spd) => (
                     <TableCell key={spd.id}>
                       {spd.metrics.rf !== undefined ? Math.round(spd.metrics.rf) : '-'}
@@ -290,7 +382,21 @@ export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
                   ))}
                 </TableRow>
                 <TableRow>
-                  <TableCell className="font-medium">Rg (Gamut)</TableCell>
+                  <TableCell className="font-medium">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1 cursor-help">
+                            Rg (Gamut)
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm">
+                          <p>{METRIC_DESCRIPTIONS["Rg (Gamut)"]}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
                   {metricsData.map((spd) => (
                     <TableCell key={spd.id}>
                       {spd.metrics.rg !== undefined ? Math.round(spd.metrics.rg) : '-'}
@@ -298,7 +404,21 @@ export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
                   ))}
                 </TableRow>
                 <TableRow>
-                  <TableCell className="font-medium">Melanopic Ratio</TableCell>
+                  <TableCell className="font-medium">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1 cursor-help">
+                            Melanopic Ratio
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm">
+                          <p>{METRIC_DESCRIPTIONS["Melanopic Ratio"]}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
                   {metricsData.map((spd) => (
                     <TableCell key={spd.id}>
                       {spd.metrics.melanopicRatio !== undefined ? spd.metrics.melanopicRatio.toFixed(3) : '-'}
@@ -306,7 +426,21 @@ export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
                   ))}
                 </TableRow>
                 <TableRow>
-                  <TableCell className="font-medium">S/P Ratio</TableCell>
+                  <TableCell className="font-medium">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1 cursor-help">
+                            S/P Ratio
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm">
+                          <p>{METRIC_DESCRIPTIONS["S/P Ratio"]}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
                   {metricsData.map((spd) => (
                     <TableCell key={spd.id}>
                       {spd.metrics.scotopicPhotopicRatio !== undefined ? spd.metrics.scotopicPhotopicRatio.toFixed(3) : '-'}
@@ -314,7 +448,21 @@ export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
                   ))}
                 </TableRow>
                 <TableRow>
-                  <TableCell className="font-medium">M/P Ratio</TableCell>
+                  <TableCell className="font-medium">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1 cursor-help">
+                            M/P Ratio
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm">
+                          <p>{METRIC_DESCRIPTIONS["M/P Ratio"]}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
                   {metricsData.map((spd) => (
                     <TableCell key={spd.id}>
                       {spd.metrics.melanopicPhotopicRatio !== undefined ? spd.metrics.melanopicPhotopicRatio.toFixed(3) : '-'}
@@ -322,7 +470,21 @@ export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
                   ))}
                 </TableRow>
                 <TableRow>
-                  <TableCell className="font-medium">Blue %</TableCell>
+                  <TableCell className="font-medium">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1 cursor-help">
+                            Blue %
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm">
+                          <p>{METRIC_DESCRIPTIONS["Blue %"]}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
                   {metricsData.map((spd) => (
                     <TableCell key={spd.id}>
                       {spd.metrics.bluePercentage !== undefined ? `${spd.metrics.bluePercentage.toFixed(1)}%` : '-'}
@@ -330,7 +492,21 @@ export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
                   ))}
                 </TableRow>
                 <TableRow>
-                  <TableCell className="font-medium">Peak Wavelength</TableCell>
+                  <TableCell className="font-medium">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1 cursor-help">
+                            Peak Wavelength
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm">
+                          <p>{METRIC_DESCRIPTIONS["Peak Wavelength"]}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
                   {metricsData.map((spd) => (
                     <TableCell key={spd.id}>
                       {spd.metrics.peakWavelength !== undefined ? `${Math.round(spd.metrics.peakWavelength)}nm` : '-'}
@@ -338,7 +514,21 @@ export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
                   ))}
                 </TableRow>
                 <TableRow>
-                  <TableCell className="font-medium">Dominant Wavelength</TableCell>
+                  <TableCell className="font-medium">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1 cursor-help">
+                            Dominant Wavelength
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm">
+                          <p>{METRIC_DESCRIPTIONS["Dominant Wavelength"]}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
                   {metricsData.map((spd) => (
                     <TableCell key={spd.id}>
                       {spd.metrics.dominantWavelength !== undefined ? `${Math.round(spd.metrics.dominantWavelength)}nm` : '-'}

@@ -1,6 +1,6 @@
 import { SpectralData, Metrics } from '../types/spectrum';
 import { CIE_X, CIE_Y, CIE_Z, V_LAMBDA, V_PRIME_LAMBDA, MELANOPIC } from '../data/cie-data';
-import { calculateCRICIE } from './cri-cie';
+import { calculateCRISimple as calculateCRICIE } from './cri-simple';
 import { calculateTM30 } from './tm30';
 
 // Helper function to interpolate SPD to standard wavelengths
@@ -180,22 +180,27 @@ export function calculateMPRatio(spd: SpectralData): number {
   return calculateMelanopicRatio(spd);
 }
 
-// Calculate blue light percentage (380-500nm)
+// Calculate blue light percentage (380-500nm) within visible spectrum (380-780nm)
 export function calculateBluePercentage(spd: SpectralData): number {
   let blueSum = 0;
-  let totalSum = 0;
+  let visibleSum = 0;
   
   for (const [wl, intensity] of Object.entries(spd)) {
     const wavelength = parseInt(wl);
-    totalSum += intensity;
     
-    if (wavelength >= 380 && wavelength <= 500) {
-      blueSum += intensity;
+    // Only count wavelengths in the visible spectrum (380-780nm)
+    if (wavelength >= 380 && wavelength <= 780) {
+      visibleSum += intensity;
+      
+      // Count blue region (380-500nm)
+      if (wavelength <= 500) {
+        blueSum += intensity;
+      }
     }
   }
   
-  if (totalSum === 0) return 0;
-  return Math.round((blueSum / totalSum) * 10000) / 100; // Return as percentage
+  if (visibleSum === 0) return 0;
+  return Math.round((blueSum / visibleSum) * 10000) / 100; // Return as percentage
 }
 
 // Calculate peak wavelength

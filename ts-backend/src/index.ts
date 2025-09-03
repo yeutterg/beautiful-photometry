@@ -3,6 +3,7 @@ import cors from 'cors';
 import { SpectralData, SPD, Metrics } from './types/spectrum';
 import { calculateAllMetrics } from './calculations/metrics';
 import { calculateTM30 } from './calculations/tm30';
+import { calculateCRISimple as calculateCRI } from './calculations/cri-simple';
 
 const app = express();
 const PORT = process.env.PORT || 8081;
@@ -75,6 +76,48 @@ app.post('/api/metrics/batch', (req, res) => {
   } catch (error) {
     console.error('Error in batch calculation:', error);
     res.status(500).json({ error: 'Failed to calculate metrics' });
+  }
+});
+
+// CRI endpoint
+app.post('/api/cri', (req, res) => {
+  try {
+    const { name, data }: { name: string; data: SpectralData } = req.body;
+    
+    if (!data || Object.keys(data).length === 0) {
+      res.status(400).json({ error: 'Invalid spectral data' });
+      return;
+    }
+    
+    console.log('Calculating CRI for:', name, 'with', Object.keys(data).length, 'wavelengths');
+    const criResults = calculateCRI(data);
+    console.log('CRI Results:', criResults);
+    res.json({ 
+      success: true, 
+      name: name || 'SPD', 
+      cri: criResults.Ra,
+      r9: criResults.R9,
+      r_values: {
+        R1: criResults.R1,
+        R2: criResults.R2,
+        R3: criResults.R3,
+        R4: criResults.R4,
+        R5: criResults.R5,
+        R6: criResults.R6,
+        R7: criResults.R7,
+        R8: criResults.R8,
+        R9: criResults.R9,
+        R10: criResults.R10,
+        R11: criResults.R11,
+        R12: criResults.R12,
+        R13: criResults.R13,
+        R14: criResults.R14,
+        R15: criResults.R15
+      }
+    });
+  } catch (error) {
+    console.error('Error calculating CRI:', error);
+    res.status(500).json({ error: 'Failed to calculate CRI' });
   }
 });
 

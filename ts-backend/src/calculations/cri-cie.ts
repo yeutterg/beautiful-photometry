@@ -500,6 +500,14 @@ export function calculateCRICIE(spd: SpectralData): {
   R15: number;
 } {
   try {
+    // Normalize the test SPD by Y tristimulus value for proper scaling
+    let testNorm = 0;
+    for (let wl = 380; wl <= 780; wl += 5) {
+      const intensity = spd[wl] || spd[wl.toString()] || 0;
+      testNorm += intensity * (CIE_1931_Y[wl] || 0) * 5;
+    }
+    if (testNorm === 0) testNorm = 1; // Prevent division by zero
+    
     // Calculate test source XYZ and chromaticity
     const testXYZ = calculateXYZ(spd);
     const testUV = calculateUV(testXYZ.X, testXYZ.Y, testXYZ.Z);
@@ -509,6 +517,15 @@ export function calculateCRICIE(spd: SpectralData): {
     
     // Get reference illuminant
     const refSPD = getReferenceIlluminant(cct);
+    
+    // Normalize the reference SPD by Y tristimulus value
+    let refNorm = 0;
+    for (let wl = 380; wl <= 780; wl += 5) {
+      const intensity = refSPD[wl] || 0;
+      refNorm += intensity * (CIE_1931_Y[wl] || 0) * 5;
+    }
+    if (refNorm === 0) refNorm = 1; // Prevent division by zero
+    
     const refXYZ = calculateXYZ(refSPD);
     const refUV = calculateUV(refXYZ.X, refXYZ.Y, refXYZ.Z);
     
@@ -527,16 +544,17 @@ export function calculateCRICIE(spd: SpectralData): {
       
       for (let wl = 380; wl <= 780; wl += 5) {
         const reflectance = tcsReflectance[wl] || 0;
-        const testIntensity = (spd[wl] || spd[wl.toString()] || 0) * reflectance;
-        const refIntensity = (refSPD[wl] || 0) * reflectance;
+        // Apply normalization to maintain proper scale
+        const testIntensity = ((spd[wl] || spd[wl.toString()] || 0) / testNorm * 100) * reflectance;
+        const refIntensity = ((refSPD[wl] || 0) / refNorm * 100) * reflectance;
         
-        testSampleX += testIntensity * (CIE_1931_X[wl] || 0);
-        testSampleY += testIntensity * (CIE_1931_Y[wl] || 0);
-        testSampleZ += testIntensity * (CIE_1931_Z[wl] || 0);
+        testSampleX += testIntensity * (CIE_1931_X[wl] || 0) * 5;
+        testSampleY += testIntensity * (CIE_1931_Y[wl] || 0) * 5;
+        testSampleZ += testIntensity * (CIE_1931_Z[wl] || 0) * 5;
         
-        refSampleX += refIntensity * (CIE_1931_X[wl] || 0);
-        refSampleY += refIntensity * (CIE_1931_Y[wl] || 0);
-        refSampleZ += refIntensity * (CIE_1931_Z[wl] || 0);
+        refSampleX += refIntensity * (CIE_1931_X[wl] || 0) * 5;
+        refSampleY += refIntensity * (CIE_1931_Y[wl] || 0) * 5;
+        refSampleZ += refIntensity * (CIE_1931_Z[wl] || 0) * 5;
       }
       
       // Calculate chromaticity
@@ -588,6 +606,8 @@ export function calculateCRICIE(spd: SpectralData): {
     };
   } catch (error) {
     console.error('Error calculating CRI:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
+    console.error('SPD keys:', Object.keys(spd).slice(0, 10));
     return {
       Ra: 0,
       R1: 0, R2: 0, R3: 0, R4: 0, R5: 0,

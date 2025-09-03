@@ -32,7 +32,7 @@ services:
     build: ./frontend
     container_name: beautiful-photometry-frontend
     ports:
-      - "3000:3000"
+      - "3002:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:5001
       - NEXT_PUBLIC_TS_API_URL=http://localhost:8081

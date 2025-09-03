@@ -18,8 +18,9 @@ export function UploadTab({ dataType, onUploadComplete }: UploadTabProps) {
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     // Handle file upload
     for (const file of acceptedFiles) {
+      const toastId = toast.loading(`Uploading ${file.name}...`)
+      
       try {
-        toast.loading(`Uploading ${file.name}...`)
         const result = await api.uploadFile(file)
         
         // Add to library store
@@ -29,7 +30,9 @@ export function UploadTab({ dataType, onUploadComplete }: UploadTabProps) {
             type: 'SPD',
             data: result.spd_data,
           })
-          toast.success(`Successfully imported ${file.name}`)
+          toast.success(`Successfully imported ${file.name}`, { id: toastId })
+        } else {
+          toast.error(`File ${file.name} contains no SPD data`, { id: toastId })
         }
         
         // Trigger refresh callback if provided
@@ -38,7 +41,7 @@ export function UploadTab({ dataType, onUploadComplete }: UploadTabProps) {
         }
       } catch (error) {
         console.error('Upload error:', error)
-        toast.error(`Failed to upload ${file.name}`)
+        toast.error(`Failed to upload ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`, { id: toastId })
       }
     }
   }, [addItem, onUploadComplete])
