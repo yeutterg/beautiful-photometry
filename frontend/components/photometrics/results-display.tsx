@@ -35,7 +35,7 @@ const METRIC_DESCRIPTIONS = {
   "Melanopic Ratio": "Ratio of melanopic to photopic response. Indicates the light's biological impact on circadian rhythms. Higher values = more biologically active light.",
   "S/P Ratio": "Scotopic/Photopic Ratio: Compares sensitivity under low light (rod vision) vs normal light (cone vision). Higher values appear brighter in peripheral/night vision.",
   "M/P Ratio": "Melanopic/Photopic Ratio: Similar to Melanopic Ratio, indicates circadian impact relative to visual brightness.",
-  "Blue %": "Percentage of visible light in the blue region. Calculated as: (intensity from 380-500nm) / (intensity from 380-780nm) × 100%. Only considers the visible spectrum range.",
+  "Blue %": "Percentage of visible light in the blue region (380-500nm). Calculated using integration: (∫₃₈₀⁵⁰⁰ SPD(λ)dλ) / (∫₃₈₀⁷⁸⁰ SPD(λ)dλ) × 100%. Uses trapezoidal integration for accurate area calculation across the spectral power distribution.",
   "Peak Wavelength": "The wavelength with the highest intensity in the spectrum. Indicates the dominant color component of the light.",
   "Dominant Wavelength": "The monochromatic wavelength that appears the same color as the light source when mixed with white. Represents perceived color."
 }

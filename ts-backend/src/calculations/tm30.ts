@@ -89,7 +89,9 @@ function generateAdditionalCES(): void {
       // Grays and whites - relatively flat spectra
       const level = 0.1 + (i / 7) * 0.7; // 0.1 to 0.8
       for (let wl = 380; wl <= 780; wl += 5) {
-        reflectance[wl] = level + Math.random() * 0.05; // Small variation
+        // Use deterministic variation based on wavelength and sample index
+        const variation = 0.025 * Math.sin((wl + i * 100) / 50);
+        reflectance[wl] = level + variation;
       }
     } else if (i <= 14) {
       // Skin tones - peak in red/orange region

@@ -66,31 +66,81 @@ export default function CRIPage() {
           return
         }
 
-        // Use mock CRI data for now - backend integration needs work
-        const mockCriResults = spds.map(spd => ({
-          id: spd!.id,
-          name: spd!.title,
-          values: {
-            ra: 85 + Math.random() * 15,
-            r1: 80 + Math.random() * 20,
-            r2: 80 + Math.random() * 20,
-            r3: 80 + Math.random() * 20,
-            r4: 80 + Math.random() * 20,
-            r5: 80 + Math.random() * 20,
-            r6: 80 + Math.random() * 20,
-            r7: 80 + Math.random() * 20,
-            r8: 80 + Math.random() * 20,
-            r9: 70 + Math.random() * 30,
-            r10: 80 + Math.random() * 20,
-            r11: 80 + Math.random() * 20,
-            r12: 80 + Math.random() * 20,
-            r13: 80 + Math.random() * 20,
-            r14: 80 + Math.random() * 20,
-            r15: 80 + Math.random() * 20
-          }
-        }))
+        // Fetch real CRI data from backend
+        const response = await fetch('http://localhost:8081/api/metrics/batch', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            spds: spds.map(spd => ({
+              id: spd!.id,
+              name: spd!.title,
+              data: spd!.data
+            }))
+          })
+        })
 
-        setCriData(mockCriResults)
+        if (!response.ok) {
+          throw new Error(`Failed to fetch CRI data: ${response.statusText}`)
+        }
+
+        const result = await response.json()
+        
+        if (result.success && result.results) {
+          // Map the backend response to the CRI data format
+          const criResults = result.results.map((item: { 
+            id: string; 
+            name: string; 
+            metrics: { 
+              criValues?: { 
+                Ra?: number; 
+                R1?: number; 
+                R2?: number; 
+                R3?: number; 
+                R4?: number; 
+                R5?: number; 
+                R6?: number; 
+                R7?: number; 
+                R8?: number; 
+                R9?: number; 
+                R10?: number; 
+                R11?: number; 
+                R12?: number; 
+                R13?: number; 
+                R14?: number; 
+                R15?: number; 
+              }; 
+              cri?: number; 
+              r9?: number; 
+            } 
+          }) => ({
+            id: item.id,
+            name: item.name,
+            values: {
+              ra: item.metrics.criValues?.Ra || item.metrics.cri || 0,
+              r1: item.metrics.criValues?.R1 || 0,
+              r2: item.metrics.criValues?.R2 || 0,
+              r3: item.metrics.criValues?.R3 || 0,
+              r4: item.metrics.criValues?.R4 || 0,
+              r5: item.metrics.criValues?.R5 || 0,
+              r6: item.metrics.criValues?.R6 || 0,
+              r7: item.metrics.criValues?.R7 || 0,
+              r8: item.metrics.criValues?.R8 || 0,
+              r9: item.metrics.criValues?.R9 || item.metrics.r9 || 0,
+              r10: item.metrics.criValues?.R10 || 0,
+              r11: item.metrics.criValues?.R11 || 0,
+              r12: item.metrics.criValues?.R12 || 0,
+              r13: item.metrics.criValues?.R13 || 0,
+              r14: item.metrics.criValues?.R14 || 0,
+              r15: item.metrics.criValues?.R15 || 0
+            }
+          }))
+
+          setCriData(criResults)
+        } else {
+          throw new Error(result.error || 'Failed to calculate CRI values')
+        }
       } catch (error) {
         console.error('Error fetching CRI data:', error)
         toast.error('Failed to fetch CRI data')

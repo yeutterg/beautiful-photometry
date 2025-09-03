@@ -1,6 +1,6 @@
 import { SpectralData, Metrics } from '../types/spectrum';
 import { CIE_X, CIE_Y, CIE_Z, V_LAMBDA, V_PRIME_LAMBDA, MELANOPIC } from '../data/cie-data';
-import { calculateCRISimple as calculateCRICIE } from './cri-simple';
+import { calculateCRI as calculateCRICIE } from './cri-robust';
 import { calculateTM30 } from './tm30';
 
 // Helper function to interpolate SPD to standard wavelengths
@@ -181,26 +181,65 @@ export function calculateMPRatio(spd: SpectralData): number {
 }
 
 // Calculate blue light percentage (380-500nm) within visible spectrum (380-780nm)
+// Formula: Percent Blue = 100 × (∫₃₈₀⁵⁰⁰ SPD(λ)dλ) / (∫₃₈₀⁷⁸⁰ SPD(λ)dλ)
 export function calculateBluePercentage(spd: SpectralData): number {
-  let blueSum = 0;
-  let visibleSum = 0;
+  // Get all wavelengths and sort them
+  const wavelengths = Object.keys(spd).map(Number).sort((a, b) => a - b);
   
-  for (const [wl, intensity] of Object.entries(spd)) {
-    const wavelength = parseInt(wl);
+  let blueIntegral = 0;  // 380-500nm
+  let visibleIntegral = 0; // 380-780nm
+  
+  // Perform trapezoidal integration for better accuracy
+  for (let i = 0; i < wavelengths.length - 1; i++) {
+    const wl1 = wavelengths[i];
+    const wl2 = wavelengths[i + 1];
+    const intensity1 = spd[wl1];
+    const intensity2 = spd[wl2];
     
-    // Only count wavelengths in the visible spectrum (380-780nm)
-    if (wavelength >= 380 && wavelength <= 780) {
-      visibleSum += intensity;
-      
-      // Count blue region (380-500nm)
-      if (wavelength <= 500) {
-        blueSum += intensity;
-      }
+    // Skip if outside visible range
+    if (wl2 < 380 || wl1 > 780) continue;
+    
+    // Calculate trapezoidal area
+    const deltaWl = wl2 - wl1;
+    const avgIntensity = (intensity1 + intensity2) / 2;
+    const area = avgIntensity * deltaWl;
+    
+    // Add to visible integral if in range
+    if (wl1 >= 380 && wl2 <= 780) {
+      visibleIntegral += area;
+    } else if ((wl1 < 380 && wl2 > 380) || (wl1 < 780 && wl2 > 780)) {
+      // Partial overlap with visible range - interpolate
+      const visibleStart = Math.max(380, wl1);
+      const visibleEnd = Math.min(780, wl2);
+      const partialDelta = visibleEnd - visibleStart;
+      const interpolatedIntensity1 = wl1 < 380 ? 
+        intensity1 + (intensity2 - intensity1) * ((380 - wl1) / deltaWl) : intensity1;
+      const interpolatedIntensity2 = wl2 > 780 ? 
+        intensity1 + (intensity2 - intensity1) * ((780 - wl1) / deltaWl) : intensity2;
+      visibleIntegral += (interpolatedIntensity1 + interpolatedIntensity2) / 2 * partialDelta;
+    }
+    
+    // Add to blue integral if in blue range
+    if (wl1 >= 380 && wl2 <= 500) {
+      blueIntegral += area;
+    } else if ((wl1 < 380 && wl2 > 380 && wl2 <= 500) || (wl1 >= 380 && wl1 < 500 && wl2 > 500)) {
+      // Partial overlap with blue range - interpolate
+      const blueStart = Math.max(380, wl1);
+      const blueEnd = Math.min(500, wl2);
+      const partialDelta = blueEnd - blueStart;
+      const interpolatedIntensity1 = wl1 < 380 ? 
+        intensity1 + (intensity2 - intensity1) * ((380 - wl1) / deltaWl) : intensity1;
+      const interpolatedIntensity2 = wl2 > 500 ? 
+        intensity1 + (intensity2 - intensity1) * ((500 - wl1) / deltaWl) : intensity2;
+      blueIntegral += (interpolatedIntensity1 + interpolatedIntensity2) / 2 * partialDelta;
     }
   }
   
-  if (visibleSum === 0) return 0;
-  return Math.round((blueSum / visibleSum) * 10000) / 100; // Return as percentage
+  if (visibleIntegral === 0) return 0;
+  
+  // Calculate percentage
+  const percentage = (blueIntegral / visibleIntegral) * 100;
+  return Math.round(percentage * 100) / 100; // Round to 2 decimal places
 }
 
 // Calculate peak wavelength
