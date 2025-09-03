@@ -3,7 +3,7 @@ import cors from 'cors';
 import { SpectralData, SPD, Metrics } from './types/spectrum';
 import { calculateAllMetrics } from './calculations/metrics';
 import { calculateTM30 } from './calculations/tm30';
-import { calculateCRI } from './calculations/cri-robust';
+import { calculateCRI } from './calculations/cri-practical';
 
 const app = express();
 const PORT = process.env.PORT || 8081;

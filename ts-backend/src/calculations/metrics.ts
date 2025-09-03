@@ -1,6 +1,6 @@
 import { SpectralData, Metrics } from '../types/spectrum';
 import { CIE_X, CIE_Y, CIE_Z, V_LAMBDA, V_PRIME_LAMBDA, MELANOPIC } from '../data/cie-data';
-import { calculateCRI as calculateCRICIE } from './cri-robust';
+import { calculateCRI as calculateCRICIE } from './cri-practical';
 import { calculateTM30 } from './tm30';
 
 // Helper function to interpolate SPD to standard wavelengths
