@@ -4,7 +4,8 @@ import { useState, useEffect } from "react"
 import { DataTable } from "./data-table"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Trash2, BarChart, RefreshCw } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Trash2, BarChart, RefreshCw, Search, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { useAnalysisStore, useLibraryStore } from "@/lib/store"
@@ -27,6 +28,7 @@ export function DataLibrary() {
   const { addItemWithId, items, clearItems } = useLibraryStore()
   const [forceRefresh, setForceRefresh] = useState(0)
   const [activeTab, setActiveTab] = useState("all")
+  const [searchQuery, setSearchQuery] = useState("")
   
   // Load library items from API on mount (only if empty)
   useEffect(() => {
@@ -111,13 +113,23 @@ export function DataLibrary() {
   // Don't sync automatically - we manage data state independently
   // This prevents conflicts between API-loaded items and store items
   
-  // Filter data based on active tab
-  const filteredData = allData.filter(item => {
-    if (activeTab === 'all') return true
-    if (activeTab === 'examples') return item.source === 'examples'
-    if (activeTab === 'my-data') return item.source === 'user'
-    return true
-  })
+  // Filter data based on active tab and search query
+  const filteredData = allData
+    .filter(item => {
+      // Tab filter
+      if (activeTab === 'examples' && item.source !== 'examples') return false
+      if (activeTab === 'my-data' && item.source !== 'user') return false
+      
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase()
+        const matchesTitle = item.title.toLowerCase().includes(query)
+        return matchesTitle
+      }
+      
+      return true
+    })
+    .sort((a, b) => a.title.localeCompare(b.title)) // Simple alphabetical sort
 
   const handleSelectionChange = (selectedIds: string[]) => {
     setSelectedItems(selectedIds)
@@ -267,19 +279,50 @@ export function DataLibrary() {
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-4">
-          <TabsTrigger value="all">
-            All ({allData.length})
-          </TabsTrigger>
-          <TabsTrigger value="examples">
-            Examples ({allData.filter(d => d.source === 'examples').length})
-          </TabsTrigger>
-          <TabsTrigger value="my-data">
-            My Data ({allData.filter(d => d.source === 'user').length})
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex gap-4 mb-4 items-center">
+          <TabsList className="grid grid-cols-3 w-fit">
+            <TabsTrigger value="all">
+              All ({allData.length})
+            </TabsTrigger>
+            <TabsTrigger value="examples">
+              Examples ({allData.filter(d => d.source === 'examples').length})
+            </TabsTrigger>
+            <TabsTrigger value="my-data">
+              My Data ({allData.filter(d => d.source === 'user').length})
+            </TabsTrigger>
+          </TabsList>
+          
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              type="text"
+              placeholder="Search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  setSearchQuery("")
+                }
+              }}
+              className="pl-10 pr-10"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
         
         <TabsContent value={activeTab}>
+          {searchQuery && (
+            <div className="mb-4 text-sm text-muted-foreground">
+              Found {filteredData.length} result{filteredData.length !== 1 ? 's' : ''} for &ldquo;{searchQuery}&rdquo;
+            </div>
+          )}
           <DataTable
             data={filteredData}
             selectedItems={selectedItems}
