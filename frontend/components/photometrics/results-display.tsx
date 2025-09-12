@@ -32,9 +32,9 @@ const METRIC_DESCRIPTIONS = {
   R9: "CRI R9: Specific test for rendering of strong red colors. Important for skin tones and red objects. Often lower than Ra, values above 50 are considered good.",
   "Rf (Fidelity)": "TM-30 Fidelity Index: Modern color rendering metric that uses 99 color samples. Scale 0-100, measures average color fidelity compared to reference.",
   "Rg (Gamut)": "TM-30 Gamut Index: Measures color saturation/vividness. 100 = same as reference, >100 = increased saturation, <100 = decreased saturation.",
-  "Melanopic Ratio": "Ratio of melanopic to photopic response. Indicates the light's biological impact on circadian rhythms. Higher values = more biologically active light.",
   "S/P Ratio": "Scotopic/Photopic Ratio: Compares sensitivity under low light (rod vision) vs normal light (cone vision). Higher values appear brighter in peripheral/night vision.",
   "M/P Ratio": "Melanopic/Photopic Ratio: Indicates circadian impact relative to visual brightness. Calculated as (∑ SPD(λ) × melanopic_response(λ)) / (∑ SPD(λ) × photopic_response(λ)) across 380-780nm wavelengths at 5nm intervals. Higher values indicate more biologically active light per unit of visual brightness.",
+  "MDER": "Melanopic Daylight Efficacy Ratio: Standardized metric per CIE S026-2018 that normalizes melanopic effect to D65 daylight (6500K). MDER = 1.0 for standard daylight. Calculated as M/P Ratio × 0.906. Values >1 indicate stronger circadian impact than daylight, <1 indicate weaker impact.",
   "Blue %": "Percentage of visible light in the blue region (380-500nm). Calculated using integration: (∫₃₈₀⁵⁰⁰ SPD(λ)dλ) / (∫₃₈₀⁷⁸⁰ SPD(λ)dλ) × 100%. Uses trapezoidal integration for accurate area calculation across the spectral power distribution.",
   "Peak Wavelength": "The wavelength with the highest intensity in the spectrum. Indicates the dominant color component of the light.",
   "Dominant Wavelength": "The monochromatic wavelength that appears the same color as the light source when mixed with white. Represents perceived color."
@@ -51,10 +51,10 @@ interface MetricsData {
     r9?: number
     rf?: number
     rg?: number
-    melanopicRatio?: number
     melanopicResponse?: number
     scotopicPhotopicRatio?: number
     melanopicPhotopicRatio?: number
+    mder?: number
     bluePercentage?: number
     peakWavelength?: number
     dominantWavelength?: number
@@ -161,9 +161,9 @@ export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
         ['R9', ...metricsData.map(spd => spd.metrics.r9 !== undefined ? Math.round(spd.metrics.r9).toString() : 'N/A')],
         ['Rf (Fidelity)', ...metricsData.map(spd => spd.metrics.rf !== undefined ? Math.round(spd.metrics.rf).toString() : 'N/A')],
         ['Rg (Gamut)', ...metricsData.map(spd => spd.metrics.rg !== undefined ? Math.round(spd.metrics.rg).toString() : 'N/A')],
-        ['Melanopic Ratio', ...metricsData.map(spd => spd.metrics.melanopicRatio !== undefined ? spd.metrics.melanopicRatio.toFixed(3) : 'N/A')],
         ['S/P Ratio', ...metricsData.map(spd => spd.metrics.scotopicPhotopicRatio !== undefined ? spd.metrics.scotopicPhotopicRatio.toFixed(3) : 'N/A')],
         ['M/P Ratio', ...metricsData.map(spd => spd.metrics.melanopicPhotopicRatio !== undefined ? spd.metrics.melanopicPhotopicRatio.toFixed(3) : 'N/A')],
+        ['MDER', ...metricsData.map(spd => spd.metrics.mder !== undefined ? spd.metrics.mder.toFixed(3) : 'N/A')],
         ['Blue %', ...metricsData.map(spd => spd.metrics.bluePercentage !== undefined ? `${spd.metrics.bluePercentage.toFixed(1)}%` : 'N/A')],
         ['Peak Wavelength', ...metricsData.map(spd => spd.metrics.peakWavelength !== undefined ? `${Math.round(spd.metrics.peakWavelength)}nm` : 'N/A')],
         ['Dominant Wavelength', ...metricsData.map(spd => spd.metrics.dominantWavelength !== undefined ? `${Math.round(spd.metrics.dominantWavelength)}nm` : 'N/A')]
@@ -409,28 +409,6 @@ export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div className="flex items-center gap-1 cursor-help">
-                            Melanopic Ratio
-                            <Info className="h-3 w-3 text-muted-foreground" />
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-sm">
-                          <p>{METRIC_DESCRIPTIONS["Melanopic Ratio"]}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </TableCell>
-                  {metricsData.map((spd) => (
-                    <TableCell key={spd.id}>
-                      {spd.metrics.melanopicRatio !== undefined ? spd.metrics.melanopicRatio.toFixed(3) : '-'}
-                    </TableCell>
-                  ))}
-                </TableRow>
-                <TableRow>
-                  <TableCell className="font-medium">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex items-center gap-1 cursor-help">
                             S/P Ratio
                             <Info className="h-3 w-3 text-muted-foreground" />
                           </div>
@@ -466,6 +444,28 @@ export function ResultsDisplay({ isLoading = false }: { isLoading?: boolean }) {
                   {metricsData.map((spd) => (
                     <TableCell key={spd.id}>
                       {spd.metrics.melanopicPhotopicRatio !== undefined ? spd.metrics.melanopicPhotopicRatio.toFixed(3) : '-'}
+                    </TableCell>
+                  ))}
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1 cursor-help">
+                            MDER
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm">
+                          <p>{METRIC_DESCRIPTIONS["MDER"]}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
+                  {metricsData.map((spd) => (
+                    <TableCell key={spd.id}>
+                      {spd.metrics.mder !== undefined ? spd.metrics.mder.toFixed(3) : '-'}
                     </TableCell>
                   ))}
                 </TableRow>

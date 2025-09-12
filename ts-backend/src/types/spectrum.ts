@@ -47,10 +47,10 @@ export interface Metrics {
   rf?: number;
   rg?: number;
   tm30?: TM30Values;
-  melanopicRatio?: number;
   melanopicResponse?: number;
   scotopicPhotopicRatio?: number;
   melanopicPhotopicRatio?: number;
+  mder?: number;
   bluePercentage?: number;
   peakWavelength?: number;
   dominantWavelength?: number;

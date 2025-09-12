@@ -180,6 +180,14 @@ export function calculateMPRatio(spd: SpectralData): number {
   return calculateMelanopicRatio(spd);
 }
 
+// Calculate MDER (Melanopic Daylight Efficacy Ratio) per CIE S026-2018
+// MDER normalizes to D65 daylight as reference (MDER = 1 for D65)
+export function calculateMDER(spd: SpectralData): number {
+  // MDER = M/P ratio × 0.906 (daylight correction factor)
+  const mpRatio = calculateMPRatio(spd);
+  return Math.round(mpRatio * 0.906 * 1000) / 1000;
+}
+
 // Calculate blue light percentage (380-500nm) within visible spectrum (380-780nm)
 // Formula: Percent Blue = 100 × (∫₃₈₀⁵⁰⁰ SPD(λ)dλ) / (∫₃₈₀⁷⁸⁰ SPD(λ)dλ)
 export function calculateBluePercentage(spd: SpectralData): number {
@@ -301,10 +309,10 @@ export function calculateAllMetrics(name: string, spd: SpectralData): Metrics {
       rf: tm30Results.Rf,
       rg: tm30Results.Rg,
       tm30: tm30Results,
-      melanopicRatio: calculateMelanopicRatio(spd),
       melanopicResponse: calculateMelanopicResponse(spd),
       scotopicPhotopicRatio: calculateSPRatio(spd),
       melanopicPhotopicRatio: calculateMPRatio(spd),
+      mder: calculateMDER(spd),
       bluePercentage: calculateBluePercentage(spd),
       peakWavelength: calculatePeakWavelength(spd),
       dominantWavelength: calculateDominantWavelength(spd)
