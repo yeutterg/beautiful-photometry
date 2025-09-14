@@ -18,6 +18,7 @@ from src.beautiful_photometry.beautiful_photometry.plot import plot_spectrum, pl
 from src.beautiful_photometry.beautiful_photometry.human_circadian import melanopic_ratio, melanopic_response, melanopic_lumens, melanopic_photopic_ratio
 from src.beautiful_photometry.beautiful_photometry.human_visual import scotopic_photopic_ratio
 from src.beautiful_photometry.beautiful_photometry.photometer import uprtek_import_spectrum
+from src.beautiful_photometry.beautiful_photometry.cri import calculate_cri, calculate_cri_batch
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
@@ -430,6 +431,92 @@ def handle_exception(e):
     print(f"Unhandled exception: {e}", flush=True)
     print(traceback.format_exc(), flush=True)
     return jsonify({'error': str(e), 'success': False}), 500
+
+@app.route('/api/metrics/batch', methods=['POST'])
+def process_metrics_batch():
+    """Calculate metrics for a batch of SPDs"""
+    try:
+        data = request.get_json()
+        if not data or 'spds' not in data:
+            return jsonify({'error': 'Invalid request data', 'success': False}), 400
+        
+        spds_data = data.get('spds', [])
+        if not spds_data:
+            return jsonify({'error': 'No SPD data provided', 'success': False}), 400
+        
+        # Process each SPD
+        results = []
+        for spd_item in spds_data:
+            try:
+                spd_id = spd_item.get('id')
+                spd_name = spd_item.get('name', f'SPD {len(results) + 1}')
+                spd_data = spd_item.get('data', {})
+                
+                if not spd_data:
+                    results.append({
+                        'id': spd_id,
+                        'name': spd_name,
+                        'error': 'No spectral data provided'
+                    })
+                    continue
+                
+                # Convert the SPD data to a colour.SpectralDistribution object
+                wavelengths = []
+                values = []
+                for wavelength_str, value in spd_data.items():
+                    try:
+                        wavelength = float(wavelength_str)
+                        wavelengths.append(wavelength)
+                        values.append(float(value))
+                    except (ValueError, TypeError):
+                        continue
+                
+                if not wavelengths or not values:
+                    results.append({
+                        'id': spd_id,
+                        'name': spd_name,
+                        'error': 'Invalid spectral data format'
+                    })
+                    continue
+                
+                # Create the SPD object
+                spd_dict = dict(zip(wavelengths, values))
+                spd = create_colour_spd(spd_dict, spd_name)
+                
+                # Calculate metrics
+                metrics = {
+                    'melanopic_ratio': round(melanopic_ratio(spd), 3),
+                    'melanopic_response': round(melanopic_response(spd), 1),
+                    'scotopic_photopic_ratio': round(scotopic_photopic_ratio(spd), 3),
+                    'melanopic_photopic_ratio': round(melanopic_photopic_ratio(spd), 3),
+                    'cri': calculate_cri(spd)  # Add CRI values
+                }
+                
+                results.append({
+                    'id': spd_id,
+                    'name': spd_name,
+                    'metrics': metrics
+                })
+                
+            except Exception as e:
+                results.append({
+                    'id': spd_item.get('id'),
+                    'name': spd_item.get('name', 'Unknown'),
+                    'error': str(e)
+                })
+        
+        return jsonify({
+            'success': True,
+            'results': results
+        })
+        
+    except Exception as e:
+        import traceback
+        error_msg = f"Metrics batch processing error: {str(e)}"
+        print(error_msg)
+        print(traceback.format_exc())
+        return jsonify({'error': error_msg, 'success': False}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8080) 
