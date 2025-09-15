@@ -434,9 +434,16 @@ def handle_exception(e):
     print(traceback.format_exc(), flush=True)
     return jsonify({'error': str(e), 'success': False}), 500
 
-@app.route('/api/metrics/batch', methods=['POST'])
+@app.route('/api/metrics/batch', methods=['POST', 'OPTIONS'])
 def process_metrics_batch():
     """Calculate metrics for a batch of SPDs"""
+    # Handle preflight OPTIONS request
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'success'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        return response
     try:
         data = request.get_json()
         if not data or 'spds' not in data:
@@ -493,7 +500,8 @@ def process_metrics_batch():
                     'melanopic_response': round(melanopic_response(spd), 1),
                     'scotopic_photopic_ratio': round(scotopic_photopic_ratio(spd), 3),
                     'melanopic_photopic_ratio': round(melanopic_photopic_ratio(spd), 3),
-                    'cri': cri_values,  # Add CRI values in the format expected by frontend
+                    'cri': cri_values['Ra'],  # Simple numeric CRI value
+                    'r9': cri_values['R9'],   # R9 value separately
                     'cri_value': cri_values['Ra'],  # Also provide as cri_value for backward compatibility
                     'criValues': {  # Add criValues format for compatibility with frontend
                         'Ra': cri_values['Ra'],
@@ -514,6 +522,9 @@ def process_metrics_batch():
                         'R15': cri_values['R15']
                     }
                 }
+                
+                # Add the object format that was in the initial code
+                metrics['cri_values'] = cri_values
                 
                 results.append({
                     'id': spd_id,
