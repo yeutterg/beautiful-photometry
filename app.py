@@ -492,18 +492,18 @@ def process_metrics_batch():
                 spd_dict = dict(zip(wavelengths, values))
                 spd = create_colour_spd(spd_dict, spd_name)
                 
-                # Calculate metrics
+                # Calculate metrics - only using the EXACT format expected by frontend
                 cri_values = calculate_cri(spd)
                 
+                # Use ONLY the format explicitly shown in the frontend code
                 metrics = {
                     'melanopic_ratio': round(melanopic_ratio(spd), 3),
                     'melanopic_response': round(melanopic_response(spd), 1),
                     'scotopic_photopic_ratio': round(scotopic_photopic_ratio(spd), 3),
                     'melanopic_photopic_ratio': round(melanopic_photopic_ratio(spd), 3),
-                    'cri': cri_values['Ra'],  # Simple numeric CRI value
-                    'r9': cri_values['R9'],   # R9 value separately
-                    'cri_value': cri_values['Ra'],  # Also provide as cri_value for backward compatibility
-                    'criValues': {  # Add criValues format for compatibility with frontend
+                    'cri': cri_values['Ra'],
+                    'r9': cri_values['R9'],
+                    'criValues': {
                         'Ra': cri_values['Ra'],
                         'R1': cri_values['R1'],
                         'R2': cri_values['R2'],
@@ -522,9 +522,6 @@ def process_metrics_batch():
                         'R15': cri_values['R15']
                     }
                 }
-                
-                # Add the object format that was in the initial code
-                metrics['cri_values'] = cri_values
                 
                 results.append({
                     'id': spd_id,
@@ -553,4 +550,5 @@ def process_metrics_batch():
 
 
 if __name__ == '__main__':
+    print("Starting server on port 8081 for metrics API...")
     app.run(debug=True, host='0.0.0.0', port=8081) 
