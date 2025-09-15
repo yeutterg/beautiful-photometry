@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Bar, BarChart, CartesianGrid, Cell, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
-import { CRI_COLORS } from "@/lib/cri-constants"
+import { CRI_COLORS, CRI_CALCULATION_INFO } from "@/lib/cri-constants"
 import { Pencil } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -76,22 +76,50 @@ export function CRIBarChart({
     return dataPoint
   })
 
-  // Custom tooltip with proper background
+  // Custom tooltip with proper background and detailed calculation info
   const CustomTooltip = ({ active, payload, label }: {
     active?: boolean
-    payload?: Array<{ name: string; value: number; color?: string }>
+    payload?: Array<{ name: string; value: number; color?: string; payload?: { criKey: string } }>
     label?: string
   }) => {
     if (active && payload && payload.length) {
+      // Get the corresponding CRI key from the chart data
+      const criKey = payload[0]?.payload?.criKey || label?.toLowerCase()
+      const calculationInfo = CRI_CALCULATION_INFO[criKey as keyof typeof CRI_CALCULATION_INFO]
+
       return (
-        <div className="bg-background border border-border rounded-lg shadow-lg p-3">
-          <p className="font-semibold mb-1">{label}</p>
-          {payload.map((entry, index) => (
-            <div key={index} className="flex items-center gap-2">
-              <span className="text-muted-foreground text-sm">{entry.name}:</span>
-              <span className="font-mono font-medium text-sm">{entry.value}</span>
+        <div className="bg-background border border-border rounded-lg shadow-lg p-4 max-w-sm">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div
+                className="w-3 h-3 rounded border border-border"
+                style={{ backgroundColor: CRI_COLORS[criKey as keyof typeof CRI_COLORS] }}
+              />
+              <p className="font-semibold">{label}</p>
             </div>
-          ))}
+
+            {calculationInfo && (
+              <div className="space-y-1">
+                <p className="text-sm font-medium">{calculationInfo.description}</p>
+                <p className="text-xs text-muted-foreground">{calculationInfo.formula}</p>
+              </div>
+            )}
+
+            <div className="border-t pt-2">
+              {payload.map((entry, index) => (
+                <div key={index} className="flex justify-between items-center">
+                  <span className="text-muted-foreground text-sm">{entry.name}:</span>
+                  <span className="font-mono font-medium text-sm">{entry.value}</span>
+                </div>
+              ))}
+            </div>
+
+            {calculationInfo && (
+              <div className="text-xs text-muted-foreground pt-1 border-t">
+                {calculationInfo.calculation}
+              </div>
+            )}
+          </div>
         </div>
       )
     }

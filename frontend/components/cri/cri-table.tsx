@@ -8,7 +8,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { CRI_DESCRIPTIONS, CRI_COLORS } from "@/lib/cri-constants"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { CRI_DESCRIPTIONS, CRI_COLORS, CRI_CALCULATION_INFO } from "@/lib/cri-constants"
 
 interface CRIData {
   id: string
@@ -49,46 +55,74 @@ export function CRITable({ data }: CRITableProps) {
   const rValues = ['ra', 'r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7', 'r8', 'r9', 'r10', 'r11', 'r12', 'r13', 'r14', 'r15'] as const
 
   return (
-    <div className="overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="font-semibold">R Value</TableHead>
-            <TableHead className="font-semibold min-w-[200px]">Description</TableHead>
-            {data.map(dataset => (
-              <TableHead key={dataset.id} className="font-semibold text-right">
-                {dataset.name}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rValues.map(rValue => (
-            <TableRow key={rValue}>
-              <TableCell className="font-medium">
-                <div className="flex items-center gap-2">
-                  <div 
-                    className="w-4 h-4 rounded border border-border"
-                    style={{ backgroundColor: CRI_COLORS[rValue] }}
-                  />
-                  {rValue === 'ra' ? 'Ra' : rValue.toUpperCase().replace('R', 'R')}
-                </div>
-              </TableCell>
-              <TableCell className="text-muted-foreground">
-                {CRI_DESCRIPTIONS[rValue]}
-              </TableCell>
-              {data.map(dataset => {
-                const value = dataset.values[rValue]
-                return (
-                  <TableCell key={`${dataset.id}-${rValue}`} className="text-right font-mono">
-                    {value !== undefined ? value.toFixed(1) : '-'}
-                  </TableCell>
-                )
-              })}
+    <TooltipProvider>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="font-semibold">R Value</TableHead>
+              <TableHead className="font-semibold min-w-[200px]">Description</TableHead>
+              {data.map(dataset => (
+                <TableHead key={dataset.id} className="font-semibold text-right">
+                  {dataset.name}
+                </TableHead>
+              ))}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+          </TableHeader>
+          <TableBody>
+            {rValues.map(rValue => (
+              <TableRow key={rValue}>
+                <TableCell className="font-medium">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-2 cursor-help">
+                        <div
+                          className="w-4 h-4 rounded border border-border"
+                          style={{ backgroundColor: CRI_COLORS[rValue] }}
+                        />
+                        {rValue === 'ra' ? 'Ra' : rValue.toUpperCase().replace('R', 'R')}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-sm">
+                      <div className="space-y-1">
+                        <p className="font-semibold">{CRI_CALCULATION_INFO[rValue]?.description}</p>
+                        <p className="text-xs opacity-90">{CRI_CALCULATION_INFO[rValue]?.formula}</p>
+                        <p className="text-xs">{CRI_CALCULATION_INFO[rValue]?.calculation}</p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {CRI_DESCRIPTIONS[rValue]}
+                </TableCell>
+                {data.map(dataset => {
+                  const value = dataset.values[rValue]
+                  return (
+                    <TableCell key={`${dataset.id}-${rValue}`} className="text-right font-mono">
+                      {value !== undefined ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="cursor-help">
+                              {value.toFixed(1)}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-sm">
+                            <div className="space-y-1">
+                              <p className="font-semibold">{CRI_CALCULATION_INFO[rValue]?.description}</p>
+                              <p className="text-xs">Value: {value.toFixed(1)}</p>
+                              <p className="text-xs">{CRI_CALCULATION_INFO[rValue]?.calculation}</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : '-'}
+                    </TableCell>
+                  )
+                })}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </TooltipProvider>
   )
 }
