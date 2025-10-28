@@ -3,6 +3,7 @@ import io
 import base64
 import json
 from flask import Flask, render_template, request, jsonify, send_file
+from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend
@@ -18,8 +19,10 @@ from src.beautiful_photometry.beautiful_photometry.plot import plot_spectrum, pl
 from src.beautiful_photometry.beautiful_photometry.human_circadian import melanopic_ratio, melanopic_response, melanopic_lumens, melanopic_photopic_ratio
 from src.beautiful_photometry.beautiful_photometry.human_visual import scotopic_photopic_ratio
 from src.beautiful_photometry.beautiful_photometry.photometer import uprtek_import_spectrum
+from src.beautiful_photometry.beautiful_photometry.cri import calculate_cri, calculate_cri_batch
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 app.config['SECRET_KEY'] = 'your-secret-key-here'
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
@@ -431,5 +434,121 @@ def handle_exception(e):
     print(traceback.format_exc(), flush=True)
     return jsonify({'error': str(e), 'success': False}), 500
 
+@app.route('/api/metrics/batch', methods=['POST', 'OPTIONS'])
+def process_metrics_batch():
+    """Calculate metrics for a batch of SPDs"""
+    # Handle preflight OPTIONS request
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'success'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        return response
+    try:
+        data = request.get_json()
+        if not data or 'spds' not in data:
+            return jsonify({'error': 'Invalid request data', 'success': False}), 400
+        
+        spds_data = data.get('spds', [])
+        if not spds_data:
+            return jsonify({'error': 'No SPD data provided', 'success': False}), 400
+        
+        # Process each SPD
+        results = []
+        for spd_item in spds_data:
+            try:
+                spd_id = spd_item.get('id')
+                spd_name = spd_item.get('name', f'SPD {len(results) + 1}')
+                spd_data = spd_item.get('data', {})
+                
+                if not spd_data:
+                    results.append({
+                        'id': spd_id,
+                        'name': spd_name,
+                        'error': 'No spectral data provided'
+                    })
+                    continue
+                
+                # Convert the SPD data to a colour.SpectralDistribution object
+                wavelengths = []
+                values = []
+                for wavelength_str, value in spd_data.items():
+                    try:
+                        wavelength = float(wavelength_str)
+                        wavelengths.append(wavelength)
+                        values.append(float(value))
+                    except (ValueError, TypeError):
+                        continue
+                
+                if not wavelengths or not values:
+                    results.append({
+                        'id': spd_id,
+                        'name': spd_name,
+                        'error': 'Invalid spectral data format'
+                    })
+                    continue
+                
+                # Create the SPD object
+                spd_dict = dict(zip(wavelengths, values))
+                spd = create_colour_spd(spd_dict, spd_name)
+                
+                # Calculate metrics - only using the EXACT format expected by frontend
+                cri_values = calculate_cri(spd)
+                
+                # Use ONLY the format explicitly shown in the frontend code
+                metrics = {
+                    'melanopic_ratio': round(melanopic_ratio(spd), 3),
+                    'melanopic_response': round(melanopic_response(spd), 1),
+                    'scotopic_photopic_ratio': round(scotopic_photopic_ratio(spd), 3),
+                    'melanopic_photopic_ratio': round(melanopic_photopic_ratio(spd), 3),
+                    'cri': cri_values['Ra'],
+                    'r9': cri_values['R9'],
+                    'criValues': {
+                        'Ra': cri_values['Ra'],
+                        'R1': cri_values['R1'],
+                        'R2': cri_values['R2'],
+                        'R3': cri_values['R3'],
+                        'R4': cri_values['R4'],
+                        'R5': cri_values['R5'],
+                        'R6': cri_values['R6'],
+                        'R7': cri_values['R7'],
+                        'R8': cri_values['R8'],
+                        'R9': cri_values['R9'],
+                        'R10': cri_values['R10'],
+                        'R11': cri_values['R11'],
+                        'R12': cri_values['R12'],
+                        'R13': cri_values['R13'],
+                        'R14': cri_values['R14'],
+                        'R15': cri_values['R15']
+                    }
+                }
+                
+                results.append({
+                    'id': spd_id,
+                    'name': spd_name,
+                    'metrics': metrics
+                })
+                
+            except Exception as e:
+                results.append({
+                    'id': spd_item.get('id'),
+                    'name': spd_item.get('name', 'Unknown'),
+                    'error': str(e)
+                })
+        
+        return jsonify({
+            'success': True,
+            'results': results
+        })
+        
+    except Exception as e:
+        import traceback
+        error_msg = f"Metrics batch processing error: {str(e)}"
+        print(error_msg)
+        print(traceback.format_exc())
+        return jsonify({'error': error_msg, 'success': False}), 500
+
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=8080) 
+    print("Starting server on port 8081 for metrics API...")
+    app.run(debug=True, host='0.0.0.0', port=8081) 
